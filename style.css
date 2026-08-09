@@ -1018,7 +1018,7 @@ kbd {
 /* ── Weapon Slot Buttons ── */
 #mob-weapon-slots {
   position: absolute;
-  top: 16px;
+  top: 24px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
