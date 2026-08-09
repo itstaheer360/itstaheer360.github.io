@@ -1018,11 +1018,12 @@ kbd {
 /* ── Weapon Slot Buttons ── */
 #mob-weapon-slots {
   position: absolute;
-  right: 16px;
-  bottom: 330px;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-direction: row;
+  gap: 12px;
   pointer-events: all;
 }
 
@@ -1103,7 +1104,6 @@ kbd {
   .game-title, .title-glow { font-size: 2rem; }
 
   #action-buttons { bottom: 60px; }
-  #mob-weapon-slots { bottom: 240px; }
 }
 
 /* ── Rotate Prompt ── */

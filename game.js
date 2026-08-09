@@ -3538,11 +3538,11 @@ function init() {
   // Renderer
   renderer = new THREE.WebGLRenderer({
     canvas: document.getElementById('game-canvas'),
-    antialias: true,
+    antialias: !isMobile,
   });
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.shadowMap.enabled = true;
+  renderer.setPixelRatio(isMobile ? 1 : Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = !isMobile;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   // Clock
