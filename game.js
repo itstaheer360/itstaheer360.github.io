@@ -127,8 +127,8 @@ const batState = {
   windupActive: false,    // playing the windup pose before release
 };
 
-// Shotgun recoil spring state (physically-based spring simulation)
-const shotgunRecoil = {
+// Weapon recoil spring state (physically-based spring simulation)
+const weaponRecoil = {
   // Spring values for camera pitch (upward kick)
   pitchVel: 0,       // current angular velocity (rad/s)
   pitchDisp: 0,      // current displacement from rest
@@ -2236,15 +2236,35 @@ function playerShoot() {
     muzzleFlashTimer = 0.055;
   }
 
-  // Recoil kick
-  if (w.id === 'shotgun') {
-    shotgunRecoil.pitchVel += 2.2;
-    shotgunRecoil.zVel    -= 0.30;
-    shotgunRecoil.rotVel  += 1.6;
-    shotgunRecoil.latVel  += (Math.random() - 0.5) * 1.4;
-    shakeIntensity = Math.max(shakeIntensity, 0.06);
-  } else {
-    gunGroup.position.z -= (w.id === 'rifle') ? 0.055 : 0.04;
+  // Recoil kick applied to all weapons
+  let pVel = 0, zV = 0, rVel = 0, lVel = 0, sInt = 0;
+  
+  if (w.id === 'deagle') {
+    pVel = 3.8; zV = -0.45; rVel = 2.5; lVel = (Math.random() - 0.5) * 1.8;
+    sInt = 0.09;
+  } else if (w.id === 'sniper') {
+    pVel = 2.8; zV = -0.38; rVel = 2.0; lVel = (Math.random() - 0.5) * 1.5;
+    sInt = 0.07;
+  } else if (w.id === 'shotgun') {
+    pVel = 2.2; zV = -0.30; rVel = 1.6; lVel = (Math.random() - 0.5) * 1.4;
+    sInt = 0.06;
+  } else if (w.id === 'rifle') {
+    pVel = 0.5; zV = -0.15; rVel = 0.4; lVel = (Math.random() - 0.5) * 0.4;
+    sInt = 0.02;
+  } else if (w.id === 'uzi') {
+    pVel = 0.35; zV = -0.09; rVel = 0.25; lVel = (Math.random() - 0.5) * 0.7;
+    sInt = 0.015;
+  } else if (w.id === 'pistol') {
+    pVel = 0.8; zV = -0.12; rVel = 0.6; lVel = (Math.random() - 0.5) * 0.5;
+    sInt = 0.02;
+  }
+  
+  if (w.id !== 'bat') {
+    weaponRecoil.pitchVel += pVel;
+    weaponRecoil.zVel    += zV;
+    weaponRecoil.rotVel  += rVel;
+    weaponRecoil.latVel  += lVel;
+    shakeIntensity = Math.max(shakeIntensity, sInt);
   }
 
   document.getElementById('ammo-current').textContent = w.ammo;
@@ -3012,42 +3032,37 @@ function updatePlayer(dt) {
         // ── Clunky reload animation drives everything
         updateReloadAnimation(dt, w);
       } else {
-        // ── Shotgun spring recoil simulation ────────────────────────────
+        // ── Weapon spring recoil simulation ────────────────────────────
         // Drives camera pitch, gun Z position, gun rotation.x and .z
         // via a damped spring: a = -k*x - c*v
-        if (w.id === 'shotgun') {
-          const k = shotgunRecoil.stiffness;
-          const c = shotgunRecoil.damping;
+        const k = weaponRecoil.stiffness;
+        const c = weaponRecoil.damping;
 
-          // Pitch spring
-          shotgunRecoil.pitchVel  += (-k * shotgunRecoil.pitchDisp - c * shotgunRecoil.pitchVel) * dt;
-          shotgunRecoil.pitchDisp += shotgunRecoil.pitchVel * dt;
+        // Pitch spring
+        weaponRecoil.pitchVel  += (-k * weaponRecoil.pitchDisp - c * weaponRecoil.pitchVel) * dt;
+        weaponRecoil.pitchDisp += weaponRecoil.pitchVel * dt;
 
-          // Z spring
-          shotgunRecoil.zVel  += (-k * shotgunRecoil.zDisp - c * shotgunRecoil.zVel) * dt;
-          shotgunRecoil.zDisp += shotgunRecoil.zVel * dt;
+        // Z spring
+        weaponRecoil.zVel  += (-k * weaponRecoil.zDisp - c * weaponRecoil.zVel) * dt;
+        weaponRecoil.zDisp += weaponRecoil.zVel * dt;
 
-          // Rotation.x spring
-          shotgunRecoil.rotVel  += (-k * shotgunRecoil.rotDisp - c * shotgunRecoil.rotVel) * dt;
-          shotgunRecoil.rotDisp += shotgunRecoil.rotVel * dt;
+        // Rotation.x spring
+        weaponRecoil.rotVel  += (-k * weaponRecoil.rotDisp - c * weaponRecoil.rotVel) * dt;
+        weaponRecoil.rotDisp += weaponRecoil.rotVel * dt;
 
-          // Lateral (rotation.z) spring
-          shotgunRecoil.latVel  += (-k * shotgunRecoil.latDisp - c * shotgunRecoil.latVel) * dt;
-          shotgunRecoil.latDisp += shotgunRecoil.latVel * dt;
+        // Lateral (rotation.z) spring
+        weaponRecoil.latVel  += (-k * weaponRecoil.latDisp - c * weaponRecoil.latVel) * dt;
+        weaponRecoil.latDisp += weaponRecoil.latVel * dt;
 
-          // Apply to camera pitch — add spring displacement as a direct offset
-          // on top of the player's aimed pitch (camera.rotation.x was set above).
-          camera.rotation.x = Math.max(-1.45, Math.min(1.45,
-            player.pitch + shotgunRecoil.pitchDisp));
+        // Apply to camera pitch — add spring displacement as a direct offset
+        // on top of the player's aimed pitch (camera.rotation.x was set above).
+        camera.rotation.x = Math.max(-1.45, Math.min(1.45,
+          player.pitch + weaponRecoil.pitchDisp));
 
-          // Apply to gun model
-          gunGroup.position.z = rz + shotgunRecoil.zDisp;
-          gunGroup.rotation.x = shotgunRecoil.rotDisp;
-          gunGroup.rotation.z = shotgunRecoil.latDisp * 0.18;
-        } else {
-          // Recoil recovery (lerp back to rest Z) for non-shotgun weapons
-          gunGroup.position.z += (rz - gunGroup.position.z) * dt * 14;
-        }
+        // Apply to gun model
+        gunGroup.position.z = rz + weaponRecoil.zDisp;
+        gunGroup.rotation.x = weaponRecoil.rotDisp;
+        gunGroup.rotation.z = weaponRecoil.latDisp * 0.18;
 
         // Melee bat swing animation (two types: weak horizontal arc, charged vertical slam)
         if (w.melee && batState.isSwinging) {
