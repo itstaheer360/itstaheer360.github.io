@@ -1106,3 +1106,26 @@ kbd {
   #mob-weapon-slots { bottom: 240px; }
 }
 
+/* ── Rotate Prompt ── */
+#rotate-prompt {
+  display: none;
+  z-index: 1000;
+  background: var(--bg-deep);
+}
+
+.rotate-icon {
+  font-size: 4rem;
+  color: var(--accent);
+  animation: rotateAnim 2s infinite;
+}
+
+@keyframes rotateAnim {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(-90deg); }
+}
+
+@media screen and (max-width: 900px) and (orientation: portrait) {
+  #rotate-prompt {
+    display: flex !important;
+  }
+}

@@ -3581,6 +3581,17 @@ function init() {
     startGame();
 
     if (isMobile) {
+      // Try to enter fullscreen and lock to landscape
+      const docEl = document.documentElement;
+      const requestFS = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.mozRequestFullScreen || docEl.msRequestFullscreen;
+      if (requestFS) {
+        requestFS.call(docEl).then(() => {
+          if (screen.orientation && screen.orientation.lock) {
+            screen.orientation.lock('landscape').catch(e => console.log('Orientation lock failed', e));
+          }
+        }).catch(err => console.log('Fullscreen failed', err));
+      }
+
       // Show mobile controls, skip pointer lock / click-to-start
       document.getElementById('mobile-controls').classList.remove('hidden');
       document.getElementById('click-to-start').style.display = 'none';
