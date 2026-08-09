@@ -1,0 +1,1108 @@
+/* ============================================================
+   DEADZONE FPS — Stylesheet
+   Dark tactical / futuristic theme
+   ============================================================ */
+
+/* ── Reset & Base ── */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --accent:      #ff1e3c;
+  --accent-dim:  #c01030;
+  --accent2:     #00e5ff;
+  --bg-deep:     #06040e;
+  --bg-panel:    rgba(5, 8, 20, 0.88);
+  --text-main:   #e8eaf0;
+  --text-dim:    #7a8499;
+  --green-hp:    #00ff88;
+  --font-hud:    'Rajdhani', sans-serif;
+  --font-title:  'Orbitron', sans-serif;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-deep);
+  color: var(--text-main);
+  font-family: var(--font-hud);
+  user-select: none;
+  /* Prevent pull-to-refresh and other mobile gestures */
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
+/* Prevent callout/selection on long-press */
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+/* ── Screen System ── */
+.screen {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.screen.active {
+  display: flex;
+}
+
+.hidden { display: none !important; }
+
+/* ── Menu Background ── */
+.menu-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 80% at 15% 50%, rgba(255, 20, 50, 0.14) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 70% at 85% 50%, rgba(0, 60, 160, 0.18) 0%, transparent 60%),
+    linear-gradient(160deg, #06040e 0%, #0b0618 50%, #06040e 100%);
+  animation: bgBreath 5s ease-in-out infinite alternate;
+}
+
+@keyframes bgBreath {
+  from { filter: brightness(0.9); }
+  to   { filter: brightness(1.1); }
+}
+
+/* Scanlines */
+.scanlines {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 3px,
+    rgba(0, 0, 0, 0.18) 3px,
+    rgba(0, 0, 0, 0.18) 4px
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── Menu Content ── */
+.menu-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 36px;
+  padding: 60px 48px;
+  background: var(--bg-panel);
+  border: 1px solid rgba(255, 30, 60, 0.25);
+  border-top: 2px solid var(--accent);
+  backdrop-filter: blur(12px);
+  box-shadow:
+    0 0 60px rgba(255, 30, 60, 0.12),
+    0 0 120px rgba(0, 0, 0, 0.8),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  min-width: 340px;
+}
+
+/* ── Title ── */
+.title-block {
+  position: relative;
+  text-align: center;
+}
+
+.title-glow {
+  position: absolute;
+  inset: 0;
+  font-family: var(--font-title);
+  font-size: 5rem;
+  font-weight: 900;
+  color: transparent;
+  text-shadow: 0 0 40px rgba(255, 30, 60, 0.6), 0 0 80px rgba(255, 30, 60, 0.3);
+  letter-spacing: 0.18em;
+  pointer-events: none;
+  animation: titlePulse 2.5s ease-in-out infinite alternate;
+}
+
+@keyframes titlePulse {
+  from { opacity: 0.6; }
+  to   { opacity: 1; }
+}
+
+.game-title {
+  font-family: var(--font-title);
+  font-size: 5rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  color: var(--text-main);
+  line-height: 1;
+  background: linear-gradient(180deg, #ffffff 0%, #cc1133 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.game-subtitle {
+  font-family: var(--font-hud);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.35em;
+  color: var(--accent);
+  margin-top: 8px;
+}
+
+/* ── Loadout Menu ── */
+.loadout-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  margin: 10px 0;
+}
+
+.loadout-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.loadout-item label {
+  font-family: var(--font-title);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: var(--text-dim);
+}
+
+.weapon-select {
+  width: 100%;
+  padding: 10px 14px;
+  font-family: var(--font-title);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+  appearance: none; /* Hide default dropdown arrow */
+  background-image: linear-gradient(45deg, transparent 50%, var(--accent) 50%),
+                    linear-gradient(135deg, var(--accent) 50%, transparent 50%);
+  background-position: calc(100% - 20px) calc(1em + 2px), calc(100% - 15px) calc(1em + 2px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+.weapon-select:hover, .weapon-select:focus {
+  border-color: var(--accent);
+  background-color: rgba(255, 30, 60, 0.08);
+}
+
+.weapon-select option {
+  background: var(--bg-panel);
+  color: var(--text-main);
+  padding: 10px;
+}
+
+/* ── Buttons ── */
+.menu-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+}
+
+.menu-btn {
+  width: 100%;
+  padding: 14px 28px;
+  font-family: var(--font-title);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+}
+
+.menu-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.03), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.4s ease;
+}
+
+.menu-btn:hover::before { transform: translateX(100%); }
+
+.menu-btn:hover {
+  border-color: rgba(255, 30, 60, 0.5);
+  color: #fff;
+  background: rgba(255, 30, 60, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(255, 30, 60, 0.2);
+}
+
+.menu-btn:active { transform: translateY(0); }
+
+.menu-btn.primary {
+  background: linear-gradient(135deg, rgba(255, 30, 60, 0.25), rgba(180, 0, 40, 0.2));
+  border-color: var(--accent);
+  box-shadow: 0 0 20px rgba(255, 30, 60, 0.2), inset 0 1px 0 rgba(255, 100, 120, 0.15);
+}
+
+.menu-btn.primary:hover {
+  background: linear-gradient(135deg, rgba(255, 30, 60, 0.4), rgba(180, 0, 40, 0.3));
+  box-shadow: 0 0 35px rgba(255, 30, 60, 0.4), inset 0 1px 0 rgba(255, 100, 120, 0.2);
+}
+
+.btn-icon { margin-right: 6px; }
+
+/* ── Menu Footer ── */
+.menu-footer {
+  font-size: 0.68rem;
+  letter-spacing: 0.2em;
+  color: var(--text-dim);
+}
+
+.menu-credit {
+  font-family: var(--font-hud);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.25em;
+  color: var(--accent);
+  text-transform: lowercase;
+  opacity: 0.75;
+  text-shadow: 0 0 10px rgba(255, 30, 60, 0.5);
+  transition: opacity 0.3s ease;
+}
+
+.menu-credit:hover {
+  opacity: 1;
+}
+
+/* ── Controls Screen ── */
+.screen-title {
+  font-family: var(--font-title);
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+  text-align: center;
+}
+
+.controls-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 28px;
+  width: 100%;
+}
+
+.ctrl-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.ctrl-item span { color: var(--text-main); }
+
+kbd {
+  font-family: var(--font-title);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--accent2);
+  background: rgba(0, 229, 255, 0.08);
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  padding: 4px 8px;
+  white-space: nowrap;
+}
+
+/* ═══════════════════════════════════════════════════════
+   GAME CONTAINER
+═══════════════════════════════════════════════════════ */
+#game-container {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+#game-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: none;
+}
+
+/* ═══════════════════════════════════════════════════════
+   HUD
+═══════════════════════════════════════════════════════ */
+#hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* ── Crosshair ── */
+#crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 24px;
+  height: 24px;
+}
+
+.ch-line {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 1px;
+}
+
+.ch-top, .ch-bottom {
+  width: 2px;
+  height: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.ch-top    { top: 0; }
+.ch-bottom { bottom: 0; }
+
+.ch-left, .ch-right {
+  height: 2px;
+  width: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.ch-left  { left: 0; }
+.ch-right { right: 0; }
+
+.ch-dot {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: rgba(255, 80, 80, 0.95);
+  border-radius: 50%;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* ── Hit Marker ── */
+#hit-marker {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 22px; height: 22px;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  transition: opacity 0.08s ease;
+}
+
+#hit-marker.active { opacity: 1; }
+
+#hit-marker::before,
+#hit-marker::after {
+  content: '';
+  position: absolute;
+  width: 22px;
+  height: 2.5px;
+  background: #ff2244;
+  top: 50%; left: 0;
+  border-radius: 1px;
+}
+
+#hit-marker::before { transform: translateY(-50%) rotate(45deg); }
+#hit-marker::after  { transform: translateY(-50%) rotate(-45deg); }
+
+/* ── Top HUD ── */
+#hud-top {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 18px 24px;
+}
+
+#wave-display,
+#kill-count {
+  font-family: var(--font-title);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: var(--text-main);
+  background: var(--bg-panel);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 2px solid var(--accent);
+  padding: 8px 16px;
+  backdrop-filter: blur(8px);
+}
+
+#wave-display span,
+#kill-count span {
+  color: var(--accent);
+  font-size: 1rem;
+}
+
+/* ── Enemy Counter ── */
+#enemy-counter {
+  position: absolute;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-title);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--text-dim);
+  background: var(--bg-panel);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 5px 14px;
+  backdrop-filter: blur(6px);
+}
+
+#enemy-counter span { color: #ff8800; }
+
+/* ── Bottom HUD ── */
+#hud-bottom {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 0 24px 24px;
+  gap: 20px;
+}
+
+#health-section,
+#ammo-section {
+  background: var(--bg-panel);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 2px solid var(--accent);
+  padding: 12px 18px;
+  backdrop-filter: blur(8px);
+  min-width: 180px;
+}
+
+.hud-label {
+  font-family: var(--font-title);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+/* Health Bar */
+#health-bar-bg {
+  width: 160px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 5px;
+}
+
+#health-bar {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, var(--green-hp), #00cc66);
+  border-radius: 3px;
+  transition: width 0.2s ease, background 0.4s ease;
+}
+
+#health-text {
+  font-family: var(--font-title);
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: var(--text-main);
+  line-height: 1;
+}
+
+/* Weapon Slots */
+#weapon-slots {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.weapon-slot {
+  font-family: var(--font-title);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 3px 7px;
+  cursor: default;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.weapon-slot.active {
+  color: var(--accent2);
+  background: rgba(0, 229, 255, 0.1);
+  border-color: var(--accent2);
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.25);
+}
+
+#weapon-name {
+  font-family: var(--font-title);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--accent2);
+  margin-bottom: 4px;
+}
+
+/* Ammo */
+#ammo-display {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  line-height: 1;
+}
+
+#ammo-current {
+  font-family: var(--font-title);
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--text-main);
+}
+
+.ammo-sep {
+  font-family: var(--font-title);
+  font-size: 1.2rem;
+  color: var(--text-dim);
+}
+
+#ammo-reserve {
+  font-family: var(--font-title);
+  font-size: 1rem;
+  color: var(--text-dim);
+}
+
+#reload-indicator {
+  font-family: var(--font-title);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: #ff8800;
+  margin-top: 4px;
+  animation: reloadBlink 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes reloadBlink {
+  from { opacity: 0.5; }
+  to   { opacity: 1; }
+}
+
+/* ── Screen Effects ── */
+#damage-overlay {
+  position: absolute;
+  inset: 0;
+  border: 0px solid rgba(255, 20, 60, 0);
+  background: rgba(255, 20, 60, 0);
+  transition: background 0.05s ease, border 0.05s ease;
+  pointer-events: none;
+}
+
+#damage-overlay.active {
+  background: rgba(255, 20, 60, 0.22);
+  border: 18px solid rgba(255, 20, 60, 0.4);
+  box-shadow: inset 0 0 60px rgba(255, 20, 60, 0.3);
+  transition: none;
+}
+
+#low-health-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(200, 0, 0, 0.7) 100%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+
+/* ── Sniper Scope Overlay ── */
+#sniper-scope {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 15;
+  background: radial-gradient(circle at center, transparent 35%, rgba(0, 0, 0, 0.95) 45%, #000 50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#sniper-scope:not(.hidden) {
+  display: flex !important;
+}
+
+/* Base crosshair lines */
+.scope-crosshair-h, .scope-crosshair-v {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.85);
+}
+
+.scope-crosshair-h {
+  width: 70%;
+  height: 2px;
+  /* Mil-dots (horizontal) */
+  background-image: repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(0, 0, 0, 0.85) 40px, rgba(0, 0, 0, 0.85) 42px);
+}
+
+.scope-crosshair-v {
+  height: 70%;
+  width: 2px;
+  /* Mil-dots (vertical) */
+  background-image: repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(0, 0, 0, 0.85) 40px, rgba(0, 0, 0, 0.85) 42px);
+}
+
+.scope-center-dot {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: #ff2244;
+  border-radius: 50%;
+}
+
+/* Add a subtle inner glass effect */
+#sniper-scope::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(100, 200, 255, 0.05) 0%, transparent 40%);
+  border-radius: 50%;
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.8);
+}
+
+/* ═══════════════════════════════════════════════════════
+   OVERLAY SCREENS
+═══════════════════════════════════════════════════════ */
+.overlay-screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  background: rgba(6, 4, 14, 0.75);
+  backdrop-filter: blur(6px);
+}
+
+.overlay-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 48px 52px;
+  background: var(--bg-panel);
+  border: 1px solid rgba(255, 30, 60, 0.25);
+  border-top: 2px solid var(--accent);
+  box-shadow: 0 0 60px rgba(255, 30, 60, 0.15), 0 0 120px rgba(0, 0, 0, 0.9);
+  min-width: 320px;
+  text-align: center;
+}
+
+.overlay-content.compact {
+  padding: 36px 44px;
+  gap: 12px;
+}
+
+.overlay-title {
+  font-family: var(--font-title);
+  font-size: 2.2rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  color: var(--text-main);
+}
+
+.overlay-title.wave-title  { color: var(--green-hp); text-shadow: 0 0 20px rgba(0, 255, 136, 0.4); }
+.overlay-title.death-title { color: var(--accent);   text-shadow: 0 0 20px rgba(255, 30, 60, 0.5); }
+
+.overlay-sub {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  letter-spacing: 0.05em;
+}
+
+.next-wave-line {
+  font-family: var(--font-title);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+}
+
+.next-wave-line span {
+  color: var(--accent2);
+  font-size: 1.4rem;
+}
+
+.bonus-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--green-hp);
+  background: rgba(0, 255, 136, 0.07);
+  border: 1px solid rgba(0, 255, 136, 0.2);
+  padding: 6px 16px;
+}
+
+/* ── Click to Start ── */
+#click-to-start { pointer-events: all; cursor: pointer; }
+
+.click-text {
+  font-family: var(--font-title);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  color: var(--text-main);
+  animation: ctsBlink 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes ctsBlink {
+  from { opacity: 0.6; }
+  to   { opacity: 1; }
+}
+
+.click-sub {
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+}
+
+.pulse-ring {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  animation: pulseRing 1.6s ease-out infinite;
+  margin-bottom: 8px;
+}
+
+@keyframes pulseRing {
+  0%   { transform: scale(0.85); opacity: 1; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+
+/* ── Stats (Game Over) ── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  width: 100%;
+  margin: 6px 0;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 14px;
+}
+
+.stat-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--text-dim);
+}
+
+.stat-value {
+  font-family: var(--font-title);
+  font-size: 2.4rem;
+  font-weight: 900;
+  color: var(--accent);
+}
+
+/* ═══════════════════════════════════════════════════════
+   ENEMY HP BARS
+═══════════════════════════════════════════════════════ */
+#enemy-hp-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 20;
+  overflow: hidden;
+}
+
+.enemy-hp-bar {
+  position: absolute;
+  width: 60px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: none;
+}
+
+.enemy-armor-fill {
+  height: 5px;
+  width: 100%;
+  background: linear-gradient(90deg, #0088ff, #44aaff);
+  transition: width 0.1s ease;
+}
+
+.enemy-hp-fill {
+  height: 5px;
+  width: 100%;
+  background: linear-gradient(90deg, #ff2244, #ff5566);
+  transition: width 0.1s ease;
+}
+
+/* ── Controls Group Label ── */
+.controls-group-label {
+  font-family: var(--font-title);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--accent2);
+  border-bottom: 1px solid rgba(0, 229, 255, 0.2);
+  padding-bottom: 6px;
+  width: 100%;
+  text-align: center;
+  margin-top: 4px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   MOBILE TOUCH CONTROLS
+═══════════════════════════════════════════════════════ */
+#mobile-controls {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+}
+
+/* Left zone — joystick area */
+#joystick-zone {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 50%;
+  height: 100%;
+  pointer-events: all;
+}
+
+#joystick-base {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+#joystick-base.visible { opacity: 1; }
+
+#joystick-knob {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 38%, rgba(255,255,255,0.35), rgba(255,30,60,0.6));
+  border: 2px solid rgba(255, 30, 60, 0.8);
+  box-shadow: 0 0 14px rgba(255, 30, 60, 0.5);
+  pointer-events: none;
+  position: absolute;
+}
+
+/* Right zone — look drag area */
+#look-zone {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 50%;
+  height: 100%;
+  pointer-events: all;
+}
+
+/* ── Action Buttons (bottom-right) ── */
+#action-buttons {
+  position: absolute;
+  right: 16px;
+  bottom: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: all;
+}
+
+.mob-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  font-family: var(--font-title);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text-main);
+  background: rgba(5, 8, 20, 0.78);
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(6px);
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  transition: border-color 0.1s, background 0.1s, transform 0.1s;
+}
+
+.mob-btn span {
+  font-size: 0.45rem;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+}
+
+.mob-btn:active,
+.mob-btn.pressed {
+  background: rgba(255, 30, 60, 0.28);
+  border-color: var(--accent);
+  transform: scale(0.92);
+  box-shadow: 0 0 12px rgba(255,30,60,0.4);
+}
+
+.shoot-btn {
+  width: 84px;
+  height: 84px;
+  background: rgba(180, 0, 30, 0.48);
+  border-color: var(--accent);
+  box-shadow: 0 0 18px rgba(255, 30, 60, 0.38);
+  font-size: 1.7rem;
+}
+
+.shoot-btn:active,
+.shoot-btn.pressed {
+  background: rgba(255, 30, 60, 0.72);
+  box-shadow: 0 0 30px rgba(255, 30, 60, 0.7);
+  transform: scale(0.88);
+}
+
+/* ADS toggled-on state */
+.mob-btn.ads-active {
+  background: rgba(0, 229, 255, 0.18);
+  border-color: var(--accent2);
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.35);
+}
+
+/* ── Weapon Slot Buttons ── */
+#mob-weapon-slots {
+  position: absolute;
+  right: 16px;
+  bottom: 330px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: all;
+}
+
+.mob-slot {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  font-family: var(--font-title);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  background: rgba(5, 8, 20, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(6px);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mob-slot.active {
+  color: var(--accent2);
+  border-color: var(--accent2);
+  background: rgba(0, 229, 255, 0.12);
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
+}
+
+/* ── Pause Button (top-right corner) ── */
+.mob-pause {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  font-size: 1.2rem;
+  pointer-events: all;
+}
+
+/* ═══════════════════════════════════════════════════════
+   RESPONSIVE — Small / Mobile screens
+═══════════════════════════════════════════════════════ */
+@media (max-width: 600px) {
+  .menu-content {
+    padding: 36px 24px;
+    gap: 24px;
+    min-width: 0;
+    width: 92vw;
+    max-width: 360px;
+  }
+
+  .game-title,
+  .title-glow {
+    font-size: 3rem;
+  }
+
+  #hud-top { padding: 10px 14px; }
+  #wave-display, #kill-count { font-size: 0.7rem; padding: 6px 10px; }
+
+  #hud-bottom { padding: 0 12px 80px; gap: 10px; }
+  #health-section, #ammo-section { min-width: 120px; padding: 8px 10px; }
+  #health-bar-bg { width: 100%; }
+  #health-text { font-size: 1.1rem; }
+  #ammo-current { font-size: 1.4rem; }
+  #weapon-name { font-size: 0.58rem; }
+
+  #enemy-counter { top: 55px; }
+
+  .controls-grid { grid-template-columns: 1fr; gap: 8px 0; }
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+  .menu-content {
+    padding: 16px 24px;
+    gap: 12px;
+    max-height: 96vh;
+    overflow-y: auto;
+  }
+  .game-title, .title-glow { font-size: 2rem; }
+
+  #action-buttons { bottom: 60px; }
+  #mob-weapon-slots { bottom: 240px; }
+}
+

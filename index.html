@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>DEADZONE — 3D FPS</title>
+  <meta name="description"
+    content="A thrilling browser-based 3D first-person shooter. Survive endless waves of enemies in the Deadzone. Built with Three.js." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+  <!-- ═══════════════════════════════════════════
+       MAIN MENU
+  ═══════════════════════════════════════════ -->
+  <div id="main-menu" class="screen active">
+    <div class="menu-bg"></div>
+    <div class="scanlines"></div>
+    <div class="menu-content">
+      <div class="title-block">
+        <div class="title-glow">DEADZONE</div>
+        <h1 class="game-title">DEADZONE</h1>
+        <p class="game-subtitle">SURVIVE THE ONSLAUGHT</p>
+      </div>
+      
+      <div class="loadout-section">
+        <div class="loadout-item">
+          <label for="primary-weapon">PRIMARY</label>
+          <select id="primary-weapon" class="weapon-select">
+            <option value="rifle">ASSAULT RIFLE</option>
+            <option value="shotgun">SHOTGUN</option>
+            <option value="sniper">SNIPER RIFLE</option>
+          </select>
+        </div>
+        <div class="loadout-item">
+          <label for="secondary-weapon">SECONDARY</label>
+          <select id="secondary-weapon" class="weapon-select">
+            <option value="pistol">STANDARD PISTOL</option>
+            <option value="deagle">DESERT EAGLE</option>
+            <option value="uzi">UZI</option>
+          </select>
+        </div>
+      </div>
+
+      <nav class="menu-buttons" aria-label="Main menu">
+        <button id="play-btn" class="menu-btn primary" aria-label="Start game">
+          <span class="btn-icon">▶</span> PLAY
+        </button>
+        <button id="controls-btn" class="menu-btn" aria-label="View controls">
+          <span class="btn-icon">⌨</span> CONTROLS
+        </button>
+      </nav>
+      <div class="menu-footer" id="menu-footer-hint">WASD · MOUSE · CLICK TO SHOOT · R RELOAD · 1/2/3 SWITCH</div>
+      <div class="menu-credit">made by Taheer</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       CONTROLS SCREEN
+  ═══════════════════════════════════════════ -->
+  <div id="controls-screen" class="screen">
+    <div class="menu-bg"></div>
+    <div class="scanlines"></div>
+    <div class="menu-content">
+      <h2 class="screen-title">CONTROLS</h2>
+      <div class="controls-group-label">⌨ KEYBOARD &amp; MOUSE</div>
+      <div class="controls-grid">
+        <div class="ctrl-item"><kbd>W A S D</kbd><span>Move</span></div>
+        <div class="ctrl-item"><kbd>MOUSE</kbd><span>Look around</span></div>
+        <div class="ctrl-item"><kbd>LEFT CLICK</kbd><span>Shoot / Swing</span></div>
+        <div class="ctrl-item"><kbd>R</kbd><span>Reload</span></div>
+        <div class="ctrl-item"><kbd>1</kbd><span>Assault Rifle</span></div>
+        <div class="ctrl-item"><kbd>2</kbd><span>Pistol</span></div>
+        <div class="ctrl-item"><kbd>3</kbd><span>Melee</span></div>
+        <div class="ctrl-item"><kbd>SHIFT</kbd><span>Sprint</span></div>
+        <div class="ctrl-item"><kbd>CTRL</kbd><span>Crouch</span></div>
+        <div class="ctrl-item"><kbd>ESC</kbd><span>Pause</span></div>
+      </div>
+      <div class="controls-group-label">📱 MOBILE / TOUCH</div>
+      <div class="controls-grid">
+        <div class="ctrl-item"><kbd>LEFT DRAG</kbd><span>Move joystick</span></div>
+        <div class="ctrl-item"><kbd>RIGHT DRAG</kbd><span>Look around</span></div>
+        <div class="ctrl-item"><kbd>🔴 FIRE</kbd><span>Shoot</span></div>
+        <div class="ctrl-item"><kbd>⟳ RELOAD</kbd><span>Reload</span></div>
+        <div class="ctrl-item"><kbd>🎯 ADS</kbd><span>Aim down sights</span></div>
+        <div class="ctrl-item"><kbd>1 2 3</kbd><span>Switch weapon</span></div>
+      </div>
+      <button id="back-btn" class="menu-btn">← BACK</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       GAME CONTAINER
+  ═══════════════════════════════════════════ -->
+  <div id="game-container" class="hidden">
+
+    <!-- ─── MOBILE TOUCH CONTROLS ─── -->
+    <div id="mobile-controls" class="hidden" aria-hidden="true">
+
+      <!-- Left zone: virtual joystick -->
+      <div id="joystick-zone" aria-label="Movement joystick">
+        <div id="joystick-base">
+          <div id="joystick-knob"></div>
+        </div>
+      </div>
+
+      <!-- Right zone: look area (touch drag) -->
+      <div id="look-zone" aria-label="Look area"></div>
+
+      <!-- Action buttons (bottom-right) -->
+      <div id="action-buttons">
+        <button id="btn-shoot" class="mob-btn shoot-btn" aria-label="Shoot">🔴<span>FIRE</span></button>
+        <button id="btn-reload" class="mob-btn" aria-label="Reload">⟳<span>RELOAD</span></button>
+        <button id="btn-ads" class="mob-btn" aria-label="Aim down sights">🎯<span>ADS</span></button>
+      </div>
+
+      <!-- Weapon slots (top of action area) -->
+      <div id="mob-weapon-slots">
+        <button id="mob-slot-1" class="mob-slot active" aria-label="Weapon 1">1</button>
+        <button id="mob-slot-2" class="mob-slot" aria-label="Weapon 2">2</button>
+        <button id="mob-slot-3" class="mob-slot" aria-label="Weapon 3">3</button>
+      </div>
+
+      <!-- Pause button -->
+      <button id="btn-pause-mob" class="mob-btn mob-pause" aria-label="Pause">⏸</button>
+
+    </div><!-- /mobile-controls -->
+    <canvas id="game-canvas" aria-label="FPS game viewport"></canvas>
+
+    <!-- ─── HUD ─── -->
+    <div id="hud" aria-label="Heads-up display">
+
+      <!-- Crosshair -->
+      <div id="crosshair" aria-hidden="true">
+        <div class="ch-line ch-top"></div>
+        <div class="ch-line ch-bottom"></div>
+        <div class="ch-line ch-left"></div>
+        <div class="ch-line ch-right"></div>
+        <div class="ch-dot"></div>
+      </div>
+      <div id="hit-marker" aria-hidden="true"></div>
+
+      <!-- Bat Charge Meter -->
+      <div id="bat-charge-container" class="hidden" aria-hidden="true">
+        <div id="bat-charge-bar"></div>
+      </div>
+
+      <!-- Top bar -->
+      <div id="hud-top">
+        <div id="wave-display" aria-live="polite">WAVE <span id="wave-num">1</span></div>
+        <div id="kill-count" aria-live="polite"><span id="kills">0</span> KILLS</div>
+      </div>
+
+      <!-- Enemy counter -->
+      <div id="enemy-counter" aria-live="polite">
+        ENEMIES: <span id="enemy-num">0</span>
+      </div>
+
+      <!-- Bottom bar -->
+      <div id="hud-bottom">
+        <div id="health-section">
+          <div class="hud-label">HEALTH</div>
+          <div id="health-bar-bg">
+            <div id="health-bar"></div>
+          </div>
+          <span id="health-text" aria-live="polite">100</span>
+        </div>
+        <div id="ammo-section">
+          <div id="weapon-slots" aria-label="Weapon slots">
+            <div class="weapon-slot active" id="slot-1" data-slot="1">1 RIFLE</div>
+            <div class="weapon-slot" id="slot-2" data-slot="2">2 PISTOL</div>
+            <div class="weapon-slot" id="slot-3" data-slot="3">3 BAT 🏏</div>
+          </div>
+          <div class="hud-label" id="weapon-name">ASSAULT RIFLE</div>
+          <div id="ammo-display">
+            <span id="ammo-current" aria-live="polite">30</span>
+            <span class="ammo-sep">/</span>
+            <span id="ammo-reserve" aria-live="polite">120</span>
+          </div>
+          <div id="reload-indicator" class="hidden" aria-live="assertive">● RELOADING</div>
+        </div>
+      </div>
+
+      <!-- Screen effects -->
+      <div id="damage-overlay" aria-hidden="true"></div>
+      <div id="low-health-vignette" aria-hidden="true"></div>
+      
+      <!-- Sniper Scope Overlay -->
+      <div id="sniper-scope" class="hidden" aria-hidden="true">
+        <div class="scope-crosshair-h"></div>
+        <div class="scope-crosshair-v"></div>
+        <div class="scope-center-dot"></div>
+      </div>
+    </div><!-- /hud -->
+
+    <!-- Enemy HP bars container (positioned via JS) -->
+    <div id="enemy-hp-container" aria-hidden="true"></div>
+
+    <!-- ─── OVERLAYS ─── -->
+
+    <!-- Click to lock pointer (desktop only) -->
+    <div id="click-to-start" class="overlay-screen" role="dialog" aria-label="Click to play">
+      <div class="overlay-content compact">
+        <div class="pulse-ring"></div>
+        <p class="click-text">CLICK TO PLAY</p>
+        <p class="click-sub">Pointer will be captured · ESC to pause</p>
+      </div>
+    </div>
+
+    <!-- Pause -->
+    <div id="pause-menu" class="overlay-screen hidden" role="dialog" aria-label="Pause menu">
+      <div class="overlay-content">
+        <h2 class="overlay-title">PAUSED</h2>
+        <button id="resume-btn" class="menu-btn primary">▶ RESUME</button>
+        <button id="restart-btn" class="menu-btn">↺ RESTART</button>
+        <button id="quit-btn" class="menu-btn">✕ QUIT TO MENU</button>
+      </div>
+    </div>
+
+    <!-- Wave complete -->
+    <div id="wave-complete" class="overlay-screen hidden" role="status" aria-live="polite">
+      <div class="overlay-content">
+        <h2 class="overlay-title wave-title">WAVE COMPLETE!</h2>
+        <p id="wave-complete-text" class="overlay-sub"></p>
+        <p class="next-wave-line">Next wave in <span id="countdown">3</span>…</p>
+        <div class="bonus-label">+25 HP · AMMO RESTOCKED</div>
+      </div>
+    </div>
+
+    <!-- Game Over -->
+    <div id="game-over" class="overlay-screen hidden" role="dialog" aria-label="Game over">
+      <div class="overlay-content">
+        <h2 class="overlay-title death-title">YOU DIED</h2>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <span class="stat-label">WAVES SURVIVED</span>
+            <span id="final-waves" class="stat-value">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">TOTAL KILLS</span>
+            <span id="final-kills" class="stat-value">0</span>
+          </div>
+        </div>
+        <button id="retry-btn" class="menu-btn primary">↺ TRY AGAIN</button>
+        <button id="menu-btn-go" class="menu-btn">⌂ MAIN MENU</button>
+      </div>
+    </div>
+
+  </div><!-- /game-container -->
+
+  <!-- Three.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="game.js"></script>
+</body>
+
+</html>
