@@ -33,6 +33,12 @@ let enemyProjectiles = [];
 /** @type {THREE.Box3[]} - Static level collidables */
 const collidables = [];
 
+/** Track all level-geometry meshes so we can clear them between map loads */
+const levelMeshes = [];
+
+/** Currently selected map id ('deadzone' | 'warfront') */
+let selectedMap = 'deadzone';
+
 // Input
 const keys = {};
 let mouseDeltaX = 0;
@@ -461,7 +467,7 @@ function makeBrickTexture(repeatX, repeatY) {
 // ─────────────────────────────────────────────────────────
 //  LEVEL CREATION
 // ─────────────────────────────────────────────────────────
-function createLevel() {
+function createDeadzoneLevel() {
   const HALF = 38;    // arena half-size (metres)
   const WALL_H = 5.5;
 
@@ -484,6 +490,7 @@ function createLevel() {
   floor.rotation.x = -Math.PI / 2;
   floor.receiveShadow = true;
   scene.add(floor);
+  levelMeshes.push(floor);
 
   // ── Ceiling (Removed so sky is visible)
   // const ceil = new THREE.Mesh(
@@ -533,9 +540,11 @@ function createLevel() {
   const skyTex = new THREE.CanvasTexture(skyCanvas);
   const skyGeo = new THREE.SphereGeometry(100, 32, 16);
   const skyMat = new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide, fog: false });
-  scene.add(new THREE.Mesh(skyGeo, skyMat));
+  const skyMesh = new THREE.Mesh(skyGeo, skyMat);
+  scene.add(skyMesh);
+  levelMeshes.push(skyMesh);
 
-  // ── Helper: add solid box, register collidable
+  // ── Helper: add solid box, register collidable & levelMeshes
   function box(x, y, z, w, h, d, mat) {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat || wallMat);
     mesh.position.set(x, y, z);
@@ -543,6 +552,7 @@ function createLevel() {
     mesh.receiveShadow = true;
     scene.add(mesh);
     collidables.push(new THREE.Box3().setFromObject(mesh));
+    levelMeshes.push(mesh);
     return mesh;
   }
 
@@ -589,7 +599,9 @@ function createLevel() {
 
   // ── Lighting
   // Ambient
-  scene.add(new THREE.AmbientLight(0x6080aa, 2.8));
+  const ambLight = new THREE.AmbientLight(0x6080aa, 2.8);
+  scene.add(ambLight);
+  levelMeshes.push(ambLight);
 
   // Directional (sun from above)
   const dir = new THREE.DirectionalLight(0xfffaee, 2.4);
@@ -604,6 +616,7 @@ function createLevel() {
   dir.shadow.camera.top = 55;
   dir.shadow.camera.bottom = -55;
   scene.add(dir);
+  levelMeshes.push(dir);
 
   // Red accent — centre
   addPointLight(0, 3.5, 0, 0xff1133, 2.5, 22);
@@ -617,10 +630,334 @@ function createLevel() {
   addPointLight(14, 3, 0, 0xff6600, 1.2, 12);
 }
 
+// ─────────────────────────────────────────────────────────
+//  WARFRONT — BATTLEFIELD MAP
+// ─────────────────────────────────────────────────────────
+function createBattlefieldLevel() {
+  const HALF = 38;
+  const WALL_H = 5.5;
+
+  // ── Dusty sandy floor texture
+  function makeSandTexture() {
+    const SIZE = 256;
+    const c = document.createElement('canvas');
+    c.width = SIZE; c.height = SIZE;
+    const ctx = c.getContext('2d');
+    // base sand tone
+    ctx.fillStyle = '#c8a060';
+    ctx.fillRect(0, 0, SIZE, SIZE);
+    // noise variation
+    for (let i = 0; i < 4000; i++) {
+      const x = Math.random() * SIZE;
+      const y = Math.random() * SIZE;
+      const r = 1 + Math.random() * 6;
+      const light = Math.random() > 0.5;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fillStyle = light ? 'rgba(200,170,100,0.35)' : 'rgba(100,70,30,0.25)';
+      ctx.fill();
+    }
+    // mud patches
+    for (let i = 0; i < 12; i++) {
+      const px = Math.random() * SIZE, py = Math.random() * SIZE;
+      ctx.beginPath();
+      ctx.ellipse(px, py, 20 + Math.random() * 30, 10 + Math.random() * 20, Math.random() * Math.PI, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(70,50,20,0.35)';
+      ctx.fill();
+    }
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(18, 18);
+    return tex;
+  }
+
+  // ── Concrete rubble texture
+  function makeConcreteTexture(rX, rY) {
+    const c = document.createElement('canvas');
+    c.width = 128; c.height = 128;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#888880';
+    ctx.fillRect(0, 0, 128, 128);
+    for (let i = 0; i < 800; i++) {
+      const x = Math.random() * 128, y = Math.random() * 128;
+      ctx.fillStyle = `rgba(${Math.floor(Math.random()*60+80)},${Math.floor(Math.random()*60+80)},${Math.floor(Math.random()*40+60)},0.4)`;
+      ctx.fillRect(x, y, 2 + Math.random() * 5, 2 + Math.random() * 5);
+    }
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(rX || 1, rY || 1);
+    return tex;
+  }
+
+  // ── Materials
+  const floorMat   = new THREE.MeshLambertMaterial({ map: makeSandTexture() });
+  const concMat    = new THREE.MeshLambertMaterial({ map: makeConcreteTexture(4, 2) });
+  const sandBagMat = new THREE.MeshLambertMaterial({ color: 0x9b8050 });
+  const metalMat   = new THREE.MeshLambertMaterial({ color: 0x4a4a40 });
+  const rustMat    = new THREE.MeshLambertMaterial({ color: 0x6b3a20 });
+  const rubbleMat  = new THREE.MeshLambertMaterial({ color: 0x7a7060 });
+  const wallMat    = new THREE.MeshLambertMaterial({ map: makeConcreteTexture(8, 2) });
+  const dirtMat    = new THREE.MeshLambertMaterial({ color: 0x7a5a30 });
+
+  // ── Helper: add solid box, register collidable & levelMeshes
+  function box(x, y, z, w, h, d, mat) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat || concMat);
+    m.position.set(x, y, z);
+    m.castShadow = true;
+    m.receiveShadow = true;
+    scene.add(m);
+    collidables.push(new THREE.Box3().setFromObject(m));
+    levelMeshes.push(m);
+    return m;
+  }
+
+  // ── Floor
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(HALF * 2, HALF * 2), floorMat);
+  floor.rotation.x = -Math.PI / 2;
+  floor.receiveShadow = true;
+  scene.add(floor);
+  levelMeshes.push(floor);
+
+  // ── Bomb crater darkened patches (flat cosmetic discs)
+  const craterMat = new THREE.MeshLambertMaterial({ color: 0x4a3010 });
+  [[0, 0], [-18, 12], [20, -15], [-8, -25], [15, 20]].forEach(([cx, cz]) => {
+    const disc = new THREE.Mesh(new THREE.CylinderGeometry(3.5 + Math.random() * 1.5, 4 + Math.random() * 1.5, 0.08, 16), craterMat);
+    disc.position.set(cx, 0.01, cz);
+    disc.receiveShadow = true;
+    scene.add(disc);
+    levelMeshes.push(disc);
+  });
+
+  // ── Warfront sky dome — dusty amber overcast
+  const skyCanvas = document.createElement('canvas');
+  skyCanvas.width = 1024; skyCanvas.height = 1024;
+  const skyCtx = skyCanvas.getContext('2d');
+  const skyGrad = skyCtx.createLinearGradient(0, 0, 0, skyCanvas.height);
+  skyGrad.addColorStop(0, '#5a4020');   // dark brownish zenith
+  skyGrad.addColorStop(0.35, '#c8803a'); // amber mid
+  skyGrad.addColorStop(0.65, '#d4a870'); // warm haze
+  skyGrad.addColorStop(1, '#e8c090');   // pale horizon
+  skyCtx.fillStyle = skyGrad;
+  skyCtx.fillRect(0, 0, skyCanvas.width, skyCanvas.height);
+  // Hazy sun (partially obscured)
+  const sgr = skyCtx.createRadialGradient(skyCanvas.width * 0.65, skyCanvas.height * 0.28, 0, skyCanvas.width * 0.65, skyCanvas.height * 0.28, 90);
+  sgr.addColorStop(0, 'rgba(255,220,120,0.85)');
+  sgr.addColorStop(0.5, 'rgba(255,180,80,0.4)');
+  sgr.addColorStop(1, 'rgba(255,150,50,0)');
+  skyCtx.fillStyle = sgr;
+  skyCtx.fillRect(0, 0, skyCanvas.width, skyCanvas.height);
+  // Smoke / dust clouds
+  for (let i = 0; i < 80; i++) {
+    skyCtx.beginPath();
+    skyCtx.arc(
+      Math.random() * skyCanvas.width,
+      Math.random() * skyCanvas.height * 0.75,
+      40 + Math.random() * 100,
+      0, Math.PI * 2
+    );
+    const a = 0.04 + Math.random() * 0.14;
+    skyCtx.fillStyle = `rgba(60,40,20,${a})`;
+    skyCtx.fill();
+  }
+  const skyTex = new THREE.CanvasTexture(skyCanvas);
+  const skyGeo = new THREE.SphereGeometry(100, 32, 16);
+  const skyMat = new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide, fog: false });
+  const skyMesh = new THREE.Mesh(skyGeo, skyMat);
+  scene.add(skyMesh);
+  levelMeshes.push(skyMesh);
+
+  // ── Outer boundary walls (concrete)
+  const hw = WALL_H / 2;
+  box(0,    hw, -HALF, HALF * 2, WALL_H, 1, wallMat);  // North
+  box(0,    hw,  HALF, HALF * 2, WALL_H, 1, wallMat);  // South
+  box(-HALF, hw, 0,   1, WALL_H, HALF * 2, wallMat);   // West
+  box( HALF, hw, 0,   1, WALL_H, HALF * 2, wallMat);   // East
+
+  // ── Ruined building shells at each corner
+  // Each corner: partial walls with a gap on one side
+  [
+    { cx: -26, cz: -26, gapSide: 'east'  },
+    { cx:  26, cz: -26, gapSide: 'west'  },
+    { cx: -26, cz:  26, gapSide: 'east'  },
+    { cx:  26, cz:  26, gapSide: 'west'  },
+  ].forEach(({ cx, cz, gapSide }) => {
+    const W = 10; const D = 10; const WH = 5.5; const wt = 0.9;
+    // Floor slab
+    box(cx, 0.05, cz, W, 0.12, D, dirtMat);
+    // Four partial walls — skip one side for the gap
+    if (gapSide !== 'north') box(cx, WH / 2, cz - D / 2, W, WH, wt, concMat); // North wall
+    if (gapSide !== 'south') box(cx, WH / 2, cz + D / 2, W, WH, wt, concMat); // South wall
+    if (gapSide !== 'west')  box(cx - W / 2, WH / 2, cz, wt, WH, D, concMat); // West wall
+    if (gapSide !== 'east')  box(cx + W / 2, WH / 2, cz, wt, WH, D, concMat); // East wall
+    // Partial interior divider (blown-out room feel)
+    box(cx - 1.5, WH * 0.35, cz, wt, WH * 0.7, D * 0.5, concMat);
+    // Rubble pile inside
+    for (let rb = 0; rb < 4; rb++) {
+      const rx = cx + (Math.random() - 0.5) * 7;
+      const rz = cz + (Math.random() - 0.5) * 7;
+      const rh = 0.3 + Math.random() * 0.8;
+      box(rx, rh / 2, rz, 0.6 + Math.random(), rh, 0.6 + Math.random(), rubbleMat);
+    }
+  });
+
+  // ── Sandbag barriers scattered across mid-field
+  function sandbagWall(x, z, len, axis) {
+    // axis: 'x' = runs along X axis, 'z' = runs along Z axis
+    const count = Math.ceil(len / 1.2);
+    for (let i = 0; i < count; i++) {
+      const ox = axis === 'x' ? (i - count / 2) * 1.1 : (Math.random() - 0.5) * 0.15;
+      const oz = axis === 'z' ? (i - count / 2) * 1.1 : (Math.random() - 0.5) * 0.15;
+      box(x + ox, 0.35, z + oz, 1.05, 0.7, 0.55, sandBagMat);
+      // Second row staggered on top
+      if (Math.random() > 0.35) {
+        box(x + ox + (axis === 'x' ? 0.52 : 0), 0.95,
+            z + oz + (axis === 'z' ? 0.52 : 0),
+            1.05, 0.7, 0.55, sandBagMat);
+      }
+    }
+  }
+  sandbagWall(0,    -13, 10, 'x');
+  sandbagWall(0,     13, 10, 'x');
+  sandbagWall(-13,   0, 10, 'z');
+  sandbagWall( 13,   0, 10, 'z');
+  sandbagWall(-20,  -8,  6, 'x');
+  sandbagWall( 20,   8,  6, 'x');
+  sandbagWall(-7,   22,  6, 'z');
+  sandbagWall( 7,  -22,  6, 'z');
+
+  // ── Destroyed vehicle hulks
+  function vehicleHulk(x, z, rotY) {
+    const body = new THREE.Mesh(new THREE.BoxGeometry(4.5, 1.4, 2.2), rustMat);
+    body.position.set(x, 0.7, z);
+    body.rotation.y = rotY;
+    body.castShadow = true; body.receiveShadow = true;
+    scene.add(body);
+    collidables.push(new THREE.Box3().setFromObject(body));
+    levelMeshes.push(body);
+
+    // Cab / turret stub
+    const cab = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.0, 1.8), metalMat);
+    cab.position.set(x, 1.9, z);
+    cab.rotation.y = rotY;
+    cab.castShadow = true;
+    scene.add(cab);
+    collidables.push(new THREE.Box3().setFromObject(cab));
+    levelMeshes.push(cab);
+
+    // Wheels (cosmetic cylinders)
+    [[-1.8, -1.1], [0, -1.1], [1.8, -1.1], [-1.8, 1.1], [0, 1.1], [1.8, 1.1]].forEach(([wx, wz]) => {
+      const wCos = Math.cos(rotY), wSin = Math.sin(rotY);
+      const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.28, 10), metalMat);
+      wheel.rotation.z = Math.PI / 2;
+      wheel.position.set(x + wx * wCos - wz * wSin, 0.38, z + wx * wSin + wz * wCos);
+      scene.add(wheel);
+      levelMeshes.push(wheel);
+    });
+  }
+  vehicleHulk(-20,  18, 0.4);
+  vehicleHulk( 20, -18, 2.8);
+  vehicleHulk(-8,  -18, 1.0);
+  vehicleHulk( 8,   18, 3.5);
+
+  // ── Rubble piles (mid-field scatter cover)
+  const rubblePositions = [
+    [-16, 6], [16, 6], [-16, -6], [16, -6],
+    [-28, 12], [28, -12],
+    [-5, 28], [5, -28],
+    [0, -18], [0, 18],
+    [-22, 0], [22, 0],
+  ];
+  rubblePositions.forEach(([rx, rz]) => {
+    const pieces = 3 + Math.floor(Math.random() * 4);
+    for (let p = 0; p < pieces; p++) {
+      const px = rx + (Math.random() - 0.5) * 3;
+      const pz = rz + (Math.random() - 0.5) * 3;
+      const ph = 0.3 + Math.random() * 1.1;
+      const pw = 0.5 + Math.random() * 1.2;
+      const pd = 0.5 + Math.random() * 1.2;
+      box(px, ph / 2, pz, pw, ph, pd, rubbleMat);
+    }
+  });
+
+  // ── Barbed wire fence sections (thin poles + cross bars)
+  function barbedWireFence(x, z, len, axis) {
+    const posts = Math.ceil(len / 3);
+    for (let i = 0; i < posts; i++) {
+      const ox = axis === 'x' ? (i - posts / 2) * 3 : 0;
+      const oz = axis === 'z' ? (i - posts / 2) * 3 : 0;
+      // Post
+      const post = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.5, 0.08), metalMat);
+      post.position.set(x + ox, 0.75, z + oz);
+      scene.add(post);
+      levelMeshes.push(post);
+      // Cross bar
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(axis === 'x' ? 3 : 0.06, 0.06, axis === 'z' ? 3 : 0.06), metalMat);
+      bar.position.set(x + ox, 1.3, z + oz);
+      scene.add(bar);
+      levelMeshes.push(bar);
+    }
+  }
+  barbedWireFence(-32, -10, 12, 'z');
+  barbedWireFence( 32,  10, 12, 'z');
+  barbedWireFence(-10, -32, 12, 'x');
+  barbedWireFence( 10,  32, 12, 'x');
+
+  // ── Central destroyed watchtower (tall box with platforms)
+  box(0, 3.5, 0, 2.5, 7, 2.5, concMat);       // Tower shaft
+  box(0, 6.8, 0, 4.5, 0.35, 4.5, metalMat);   // Top platform
+  box(0, 4.2, 0, 3.5, 0.25, 3.5, metalMat);   // Mid platform
+  // Damaged corner of tower
+  box(0.8, 1.5, 0.8, 1.5, 3, 1.5, rubbleMat);
+
+  // ── Lighting — warm battlefield atmosphere
+  scene.add(new THREE.AmbientLight(0xb89060, 2.2));
+
+  const dir = new THREE.DirectionalLight(0xd4a060, 2.0);
+  dir.position.set(-15, 18, 8);  // low-angle side lighting
+  dir.castShadow = true;
+  dir.shadow.mapSize.width = 2048;
+  dir.shadow.mapSize.height = 2048;
+  dir.shadow.camera.near = 0.1;
+  dir.shadow.camera.far = 90;
+  dir.shadow.camera.left = -60;
+  dir.shadow.camera.right = 60;
+  dir.shadow.camera.top = 60;
+  dir.shadow.camera.bottom = -60;
+  scene.add(dir);
+  levelMeshes.push(dir);
+
+  // Burning fire glow — centre tower
+  addPointLight(0, 4, 0, 0xff4400, 3.5, 28);
+  // Secondary fires at vehicle hulks
+  addPointLight(-20, 2, 18, 0xff6600, 2.2, 18);
+  addPointLight( 20, 2, -18, 0xff5500, 2.0, 16);
+  // Dusty fill lights
+  addPointLight(-30, 4, 0, 0xc87830, 1.2, 22);
+  addPointLight( 30, 4, 0, 0xc87830, 1.2, 22);
+}
+
+// ── Dispatcher: build the right level based on map id
+function createLevel(mapId) {
+  if (mapId === 'warfront') {
+    // Warfront atmosphere
+    scene.background = new THREE.Color(0xc8803a);
+    scene.fog = new THREE.FogExp2(0xc8a060, 0.013);
+    createBattlefieldLevel();
+  } else {
+    // Original Deadzone arena
+    scene.background = new THREE.Color(0x6eb5ff);
+    scene.fog = new THREE.FogExp2(0x6eb5ff, 0.011);
+    createDeadzoneLevel();
+  }
+}
+
 function addPointLight(x, y, z, color, intensity, distance) {
   const light = new THREE.PointLight(color, intensity, distance);
   light.position.set(x, y, z);
   scene.add(light);
+  levelMeshes.push(light); // auto-register for cleanup on map reload
   return light;
 }
 
@@ -3240,6 +3577,20 @@ function updateProjectiles(dt) {
 //  GAME FLOW
 // ─────────────────────────────────────────────────────────
 function startGame() {
+  // ── Read & apply map selection
+  const mapSelectEl = document.getElementById('map-select');
+  if (mapSelectEl) selectedMap = mapSelectEl.value;
+
+  // ── Tear down previous level geometry
+  levelMeshes.forEach(m => scene.remove(m));
+  levelMeshes.length = 0;
+  // Remove level-owned lights (directional/ambient are re-added per createLevel call)
+  // Reset collidables to only the boundary entries; safest is to clear all static entries
+  collidables.length = 0;
+
+  // Rebuild level for selected map
+  createLevel(selectedMap);
+
   wave = 1;
   kills = 0;
   player.health = 100;
@@ -3563,8 +3914,8 @@ function init() {
   // Clock
   clock = new THREE.Clock();
 
-  // Build world & weapon
-  createLevel();
+  // Build initial level (Deadzone default) and weapons
+  createLevel('deadzone');
   createWeapon();
 
   // Input
