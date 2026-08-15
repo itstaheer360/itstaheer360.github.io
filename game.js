@@ -703,6 +703,9 @@ function createBattlefieldLevel() {
   const dirtMat     = new THREE.MeshLambertMaterial({ color: 0x7a5a30 });
   const darkMetMat  = new THREE.MeshLambertMaterial({ color: 0x2a2a26 });
   const oliveMat    = new THREE.MeshLambertMaterial({ color: 0x4a5030 });
+  const glassMat    = new THREE.MeshLambertMaterial({ color: 0x111111, transparent: true, opacity: 0.8 });
+  const headlightMat= new THREE.MeshLambertMaterial({ color: 0xffffee, emissive: 0xaaaa66 });
+  const taillightMat= new THREE.MeshLambertMaterial({ color: 0xff2222, emissive: 0xaa0000 });
 
   // -- Helpers
   function box(x, y, z, w, h, d, mat) {
@@ -893,120 +896,374 @@ function createBattlefieldLevel() {
   sandbagCluster( 10, -22, 6, 4.5);
   sandbagCluster(-30,   8, 4, 3.0);
   sandbagCluster( 28, -10, 5, 3.5);
-
   // =====================================================
-  //  DESTROYED VEHICLES -- 4 distinct types
+  //  DESTROYED VEHICLES -- 4 distinct types (High Detail & Grouped)
   // =====================================================
 
   // JEEP
   function spawnJeep(x, z, rotY, tipped) {
     const bRoll = tipped ? Math.PI / 2 + (Math.random() - 0.5) * 0.35 : 0;
     const yOff  = tipped ? 1.0 : 0;
-    const body = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.0, 1.6), rustMat);
-    body.position.set(x, 0.5 + yOff, z);
-    body.rotation.set(bRoll, rotY, 0);
+    
+    const group = new THREE.Group();
+    
+    // Body (Main Chassis)
+    const body = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.8, 1.6), rustMat);
+    body.position.set(0, 0.4, 0);
     body.castShadow = true; body.receiveShadow = true;
-    scene.add(body); collidables.push(new THREE.Box3().setFromObject(body)); levelMeshes.push(body);
-    const cab = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.85, 1.45), rust2Mat);
-    cab.position.set(x + Math.cos(rotY) * 0.4, 1.35 + yOff, z + Math.sin(rotY) * 0.4);
-    cab.rotation.set(bRoll, rotY, 0);
-    cab.castShadow = true; scene.add(cab); levelMeshes.push(cab);
-    const wPL = [[-1.1, -0.9], [1.1, -0.9], [-1.1, 0.9], [1.1, 0.9]];
-    wPL.forEach(([wlx, wlz]) => {
-      const cos = Math.cos(rotY), sin = Math.sin(rotY);
-      const wm = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.22, 8), darkMetMat);
-      wm.rotation.z = Math.PI / 2 + bRoll;
-      wm.position.set(x + wlx * cos - wlz * sin, tipped ? 0.22 : 0.35, z + wlx * sin + wlz * cos);
-      scene.add(wm); levelMeshes.push(wm);
+    group.add(body);
+    
+    // Engine block / Hood
+    const hood = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.5, 1.5), rust2Mat);
+    hood.position.set(1.0, 0.9, 0);
+    hood.castShadow = true; hood.receiveShadow = true;
+    group.add(hood);
+
+    // Grille
+    const grille = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.4, 1.3), darkMetMat);
+    grille.position.set(1.65, 0.9, 0);
+    group.add(grille);
+
+    // Headlights (Emissive)
+    [-0.5, 0.5].forEach(zOff => {
+      const hl = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.15, 0.2), headlightMat);
+      hl.position.set(1.68, 0.95, zOff);
+      group.add(hl);
     });
-    const ws = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.6, 1.35), darkMetMat);
-    ws.position.set(x + Math.cos(rotY) * 1.15, 1.6 + yOff, z + Math.sin(rotY) * 1.15);
-    ws.rotation.set(bRoll + 0.3, rotY, 0);
-    scene.add(ws); levelMeshes.push(ws);
+
+    // Cab base (where seats go)
+    const cab = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.3, 1.5), rust2Mat);
+    cab.position.set(-0.4, 0.95, 0);
+    cab.castShadow = true;
+    group.add(cab);
+
+    // Windshield frame & Glass
+    const wsFrame = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.7, 1.5), darkMetMat);
+    wsFrame.position.set(0.4, 1.4, 0);
+    wsFrame.rotation.z = 0.2; // tilted back
+    group.add(wsFrame);
+    
+    const wsGlass = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.6, 1.4), glassMat);
+    wsGlass.position.set(0.4, 1.4, 0);
+    wsGlass.rotation.z = 0.2;
+    group.add(wsGlass);
+
+    // Seats
+    [-0.35, 0.35].forEach(zOff => {
+      const seat = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.6, 0.5), darkMetMat);
+      seat.position.set(-0.5, 1.2, zOff);
+      seat.rotation.z = -0.1;
+      group.add(seat);
+    });
+
+    // Steering wheel
+    const swPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.4, 4), darkMetMat);
+    swPipe.position.set(0.1, 1.1, 0.35);
+    swPipe.rotation.z = 0.6;
+    group.add(swPipe);
+    const swRing = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.02, 4, 12), darkMetMat);
+    swRing.position.set(0.25, 1.2, 0.35);
+    swRing.rotation.y = Math.PI / 2;
+    swRing.rotation.x = -0.3;
+    group.add(swRing);
+
+    // Wheels (4) - 24 segments for smoothness + inner hubs
+    const wPL = [[-1.1, -0.95], [1.1, -0.95], [-1.1, 0.95], [1.1, 0.95]];
+    wPL.forEach(([wlx, wlz]) => {
+      const wGroup = new THREE.Group();
+      wGroup.position.set(wlx, 0.35, wlz);
+      wGroup.rotation.x = Math.PI / 2;
+      
+      const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.25, 24), darkMetMat);
+      wGroup.add(tire);
+      
+      const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.28, 12), rustMat);
+      wGroup.add(hub);
+      
+      group.add(wGroup);
+    });
+
+    // Apply group transforms
+    group.position.set(x, yOff, z);
+    group.rotation.set(bRoll, rotY, 0);
+    scene.add(group);
+    
+    // Add collision (we need an invisible box that bounds the whole group)
+    const colliderMesh = new THREE.Mesh(new THREE.BoxGeometry(3.4, 1.8, 2.0), new THREE.MeshBasicMaterial());
+    colliderMesh.position.set(x, 0.9 + yOff, z);
+    colliderMesh.rotation.set(bRoll, rotY, 0);
+    colliderMesh.updateMatrixWorld();
+    collidables.push(new THREE.Box3().setFromObject(colliderMesh));
+    
+    levelMeshes.push(group);
   }
 
   // APC
   function spawnAPC(x, z, rotY) {
-    const hull = new THREE.Mesh(new THREE.BoxGeometry(5.0, 2.0, 2.8), oliveMat);
-    hull.position.set(x, 1.0, z); hull.rotation.y = rotY;
+    const group = new THREE.Group();
+
+    // Main hull (angled front/back)
+    const hullShape = new THREE.Shape();
+    hullShape.moveTo(-2.5, 0);
+    hullShape.lineTo(2.2, 0);
+    hullShape.lineTo(2.5, 0.8);
+    hullShape.lineTo(2.0, 1.6);
+    hullShape.lineTo(-2.2, 1.6);
+    hullShape.lineTo(-2.5, 0);
+    
+    const extrudeSettings = { depth: 2.8, bevelEnabled: false };
+    const hullGeo = new THREE.ExtrudeGeometry(hullShape, extrudeSettings);
+    // Center the extruded geometry
+    hullGeo.translate(0, 0, -1.4);
+    
+    const hull = new THREE.Mesh(hullGeo, oliveMat);
+    hull.position.set(0, 0.4, 0);
     hull.castShadow = true; hull.receiveShadow = true;
-    scene.add(hull); collidables.push(new THREE.Box3().setFromObject(hull)); levelMeshes.push(hull);
-    const turret = new THREE.Mesh(new THREE.BoxGeometry(2.0, 1.0, 1.8), darkMetMat);
-    turret.position.set(x + Math.cos(rotY) * 0.5, 2.5, z + Math.sin(rotY) * 0.5);
-    turret.rotation.y = rotY + 0.3;
-    turret.castShadow = true;
-    scene.add(turret); collidables.push(new THREE.Box3().setFromObject(turret)); levelMeshes.push(turret);
-    const barrel = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.14, 0.14), darkMetMat);
-    barrel.position.set(x + Math.cos(rotY + 0.3) * 1.8, 2.7, z + Math.sin(rotY + 0.3) * 1.8);
-    barrel.rotation.y = rotY + 0.3;
-    scene.add(barrel); levelMeshes.push(barrel);
-    [[-1.8, -1.5], [0, -1.5], [1.8, -1.5], [-1.8, 1.5], [0, 1.5], [1.8, 1.5]].forEach(([tx, tz]) => {
-      const cos = Math.cos(rotY), sin = Math.sin(rotY);
-      const track = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.35, 0.28), darkMetMat);
-      track.position.set(x + tx * cos - tz * sin, 0.18, z + tx * sin + tz * cos);
-      track.rotation.y = rotY;
-      scene.add(track); levelMeshes.push(track);
+    group.add(hull);
+
+    // Track skirts
+    [-1.5, 1.5].forEach(zOff => {
+      const skirt = new THREE.Mesh(new THREE.BoxGeometry(4.8, 1.0, 0.2), darkMetMat);
+      skirt.position.set(0, 0.8, zOff);
+      group.add(skirt);
     });
+
+    // Tracks (visible below skirts)
+    [[-1.8, -1.3], [0, -1.3], [1.8, -1.3], [-1.8, 1.3], [0, 1.3], [1.8, 1.3]].forEach(([tx, tz]) => {
+      const track = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.35, 0.4), darkMetMat);
+      track.position.set(tx, 0.18, tz);
+      group.add(track);
+    });
+
+    // Turret base
+    const turretBase = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.4, 0.4, 16), rustMat);
+    turretBase.position.set(0.5, 2.2, 0);
+    group.add(turretBase);
+
+    // Turret box
+    const turret = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.8, 1.5), oliveMat);
+    turret.position.set(0.5, 2.7, 0);
+    turret.rotation.y = 0.3;
+    turret.castShadow = true;
+    group.add(turret);
+
+    // Viewports (Glass)
+    const viewport = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.2, 0.2), glassMat);
+    viewport.position.set(0.5, 2.7, 0.7);
+    viewport.rotation.y = 0.3;
+    group.add(viewport);
+
+    // Gun barrel & mantlet
+    const mantlet = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), darkMetMat);
+    mantlet.position.set(1.4, 2.7, 0.3);
+    mantlet.rotation.y = 0.3;
+    group.add(mantlet);
+
+    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 1.8, 8), darkMetMat);
+    barrel.rotation.z = Math.PI / 2;
+    barrel.position.set(2.3, 2.7, 0.55);
+    barrel.rotation.y = 0.3;
+    group.add(barrel);
+    
     // Antenna
-    const ant = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.4, 0.05), metalMat);
-    ant.position.set(x + Math.cos(rotY) * -1.5, 3.2, z + Math.sin(rotY) * -1.5);
-    scene.add(ant); levelMeshes.push(ant);
+    const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.4, 4), metalMat);
+    ant.position.set(-1.0, 3.2, -0.8);
+    group.add(ant);
+
+    // Apply group transforms
+    group.position.set(x, 0, z);
+    group.rotation.set(0, rotY, 0);
+    scene.add(group);
+    
+    const colliderMesh = new THREE.Mesh(new THREE.BoxGeometry(5.0, 3.2, 3.0), new THREE.MeshBasicMaterial());
+    colliderMesh.position.set(x, 1.6, z);
+    colliderMesh.rotation.set(0, rotY, 0);
+    colliderMesh.updateMatrixWorld();
+    collidables.push(new THREE.Box3().setFromObject(colliderMesh));
+    levelMeshes.push(group);
   }
 
   // TRUCK
   function spawnTruck(x, z, rotY, withCargo) {
-    const cos = Math.cos(rotY), sin = Math.sin(rotY);
-    const cab = new THREE.Mesh(new THREE.BoxGeometry(2.2, 2.0, 2.2), rustMat);
-    cab.position.set(x + cos * 2.5, 1.0, z + sin * 2.5); cab.rotation.y = rotY;
+    const group = new THREE.Group();
+
+    // Chassis frame
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(6.5, 0.3, 1.2), rustMat);
+    frame.position.set(0, 0.7, 0);
+    group.add(frame);
+
+    // Cab
+    const cab = new THREE.Mesh(new THREE.BoxGeometry(2.0, 1.8, 2.2), rust2Mat);
+    cab.position.set(2.2, 1.7, 0);
     cab.castShadow = true; cab.receiveShadow = true;
-    scene.add(cab); collidables.push(new THREE.Box3().setFromObject(cab)); levelMeshes.push(cab);
-    const bed = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.25, 2.2), rust2Mat);
-    bed.position.set(x - cos * 0.8, 0.88, z - sin * 0.8); bed.rotation.y = rotY;
-    bed.castShadow = true; bed.receiveShadow = true;
-    scene.add(bed); collidables.push(new THREE.Box3().setFromObject(bed)); levelMeshes.push(bed);
-    [[-2.8, -1.2], [0, -1.2], [2.0, -1.2], [-2.8, 1.2], [0, 1.2], [2.0, 1.2]].forEach(([wx, wz]) => {
-      const wm = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.25, 8), darkMetMat);
-      wm.rotation.z = Math.PI / 2;
-      wm.position.set(x + wx * cos - wz * sin, 0.4, z + wx * sin + wz * cos);
-      scene.add(wm); levelMeshes.push(wm);
+    group.add(cab);
+
+    // Cab Windows (Glass)
+    const wFront = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.7, 1.9), glassMat);
+    wFront.position.set(3.22, 2.0, 0);
+    group.add(wFront);
+    
+    const wSide1 = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.7, 0.1), glassMat);
+    wSide1.position.set(2.4, 2.0, 1.12);
+    group.add(wSide1);
+    
+    const wSide2 = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.7, 0.1), glassMat);
+    wSide2.position.set(2.4, 2.0, -1.12);
+    group.add(wSide2);
+
+    // Engine hood
+    const hood = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.0, 2.2), rust2Mat);
+    hood.position.set(3.8, 1.3, 0);
+    group.add(hood);
+
+    // Grille & Headlights
+    const grille = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.8, 1.6), darkMetMat);
+    grille.position.set(4.42, 1.3, 0);
+    group.add(grille);
+    
+    [-0.8, 0.8].forEach(zOff => {
+      const hl = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.2, 0.2), headlightMat);
+      hl.position.set(4.42, 1.4, zOff);
+      group.add(hl);
     });
+    
+    // Front Bumper
+    const bumper = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.3, 2.4), darkMetMat);
+    bumper.position.set(4.5, 0.8, 0);
+    group.add(bumper);
+    
+    // Exhaust pipe
+    const exhaust = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 2.5, 8), rustMat);
+    exhaust.position.set(1.1, 2.0, 1.2);
+    group.add(exhaust);
+
+    // Flatbed
+    const bed = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.25, 2.4), rustMat);
+    bed.position.set(-1.0, 1.0, 0);
+    bed.castShadow = true; bed.receiveShadow = true;
+    group.add(bed);
+
+    // Wheels (6) - High detail
+    [[-2.5, -1.1], [-1.0, -1.1], [2.6, -1.1], [-2.5, 1.1], [-1.0, 1.1], [2.6, 1.1]].forEach(([wx, wz]) => {
+      const wGroup = new THREE.Group();
+      wGroup.position.set(wx, 0.5, wz);
+      wGroup.rotation.x = Math.PI / 2;
+      
+      const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.3, 24), darkMetMat);
+      wGroup.add(tire);
+      
+      const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.32, 12), rustMat);
+      wGroup.add(hub);
+      
+      group.add(wGroup);
+    });
+
+    // Optional cargo crates on flatbed
     if (withCargo) {
       for (let cr = 0; cr < 3; cr++) {
-        const crate = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.9, 0.95), oliveMat);
-        crate.position.set(x + (-1.2 + cr * 1.3) * cos, 1.4, z + (-1.2 + cr * 1.3) * sin);
-        crate.rotation.y = rotY + (Math.random() - 0.5) * 0.3;
+        const crate = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), oliveMat);
+        crate.position.set(-2.5 + cr * 1.4, 1.7, (Math.random() - 0.5) * 0.4);
+        crate.rotation.y = (Math.random() - 0.5) * 0.3;
         crate.castShadow = true; crate.receiveShadow = true;
-        scene.add(crate); collidables.push(new THREE.Box3().setFromObject(crate)); levelMeshes.push(crate);
+        group.add(crate);
       }
     }
+
+    // Apply group transforms
+    group.position.set(x, 0, z);
+    group.rotation.set(0, rotY, 0);
+    scene.add(group);
+    
+    const colliderMesh = new THREE.Mesh(new THREE.BoxGeometry(7.0, 3.0, 2.4), new THREE.MeshBasicMaterial());
+    colliderMesh.position.set(x, 1.5, z);
+    colliderMesh.rotation.set(0, rotY, 0);
+    colliderMesh.updateMatrixWorld();
+    collidables.push(new THREE.Box3().setFromObject(colliderMesh));
+    levelMeshes.push(group);
   }
 
   // TANK HULK
   function spawnTankHulk(x, z, rotY) {
-    const cos = Math.cos(rotY), sin = Math.sin(rotY);
-    const hull = new THREE.Mesh(new THREE.BoxGeometry(5.5, 1.5, 3.0), darkMetMat);
-    hull.position.set(x, 0.75, z); hull.rotation.y = rotY;
+    const group = new THREE.Group();
+
+    // Hull
+    const hull = new THREE.Mesh(new THREE.BoxGeometry(6.0, 1.2, 3.2), darkMetMat);
+    hull.position.set(0, 0.8, 0);
     hull.castShadow = true; hull.receiveShadow = true;
-    scene.add(hull); collidables.push(new THREE.Box3().setFromObject(hull)); levelMeshes.push(hull);
-    const turY = rotY + (Math.random() - 0.5) * 1.2;
-    const turret = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.9, 2.4), oliveMat);
-    turret.position.set(x, 2.0, z); turret.rotation.y = turY;
+    group.add(hull);
+    
+    // Angled front glacis
+    const glacisShape = new THREE.Shape();
+    glacisShape.moveTo(0, 0);
+    glacisShape.lineTo(1.5, 0);
+    glacisShape.lineTo(0, 1.2);
+    glacisShape.lineTo(0, 0);
+    const glacisGeo = new THREE.ExtrudeGeometry(glacisShape, { depth: 3.2, bevelEnabled: false });
+    glacisGeo.translate(0, 0, -1.6);
+    const glacis = new THREE.Mesh(glacisGeo, darkMetMat);
+    glacis.position.set(3.0, 0.2, 0);
+    group.add(glacis);
+    
+    // Engine deck details (Rear)
+    const vents = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.2, 2.5), rust2Mat);
+    vents.position.set(-2.0, 1.4, 0);
+    group.add(vents);
+
+    const turY = (Math.random() - 0.5) * 1.2;
+    
+    // Turret Group
+    const tGroup = new THREE.Group();
+    tGroup.position.set(0.5, 1.4, 0);
+    tGroup.rotation.y = turY;
+    
+    const turret = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.8, 0.9, 16), oliveMat);
+    turret.position.set(0, 0.45, 0);
     turret.castShadow = true;
-    scene.add(turret); collidables.push(new THREE.Box3().setFromObject(turret)); levelMeshes.push(turret);
-    const barrel = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.18, 0.18), darkMetMat);
-    barrel.position.set(x + Math.cos(turY) * 2.0, 2.1, z + Math.sin(turY) * 2.0);
-    barrel.rotation.y = turY;
-    scene.add(barrel); levelMeshes.push(barrel);
-    [-1, 1].forEach(side => {
-      const skirt = new THREE.Mesh(new THREE.BoxGeometry(5.5, 0.55, 0.22), rust2Mat);
-      skirt.position.set(x, 0.55, z + side * 1.6); skirt.rotation.y = rotY;
-      scene.add(skirt); levelMeshes.push(skirt);
+    tGroup.add(turret);
+    
+    // Commander's Cupola
+    const cupola = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.3, 12), rustMat);
+    cupola.position.set(-0.5, 1.0, -0.5);
+    tGroup.add(cupola);
+
+    // Main Gun Barrel
+    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 4.0, 12), darkMetMat);
+    barrel.rotation.z = Math.PI / 2;
+    barrel.position.set(3.5, 0.5, 0);
+    tGroup.add(barrel);
+    
+    // Muzzle brake
+    const brake = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.4, 12), darkMetMat);
+    brake.rotation.z = Math.PI / 2;
+    brake.position.set(5.5, 0.5, 0);
+    tGroup.add(brake);
+
+    group.add(tGroup);
+
+    // Track skirts
+    [-1.7, 1.7].forEach(zOff => {
+      const skirt = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.8, 0.2), rust2Mat);
+      skirt.position.set(0, 0.6, zOff);
+      group.add(skirt);
     });
-    const blownTrack = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.18, 0.35), darkMetMat);
-    blownTrack.position.set(x + cos * 3 + (Math.random() - 0.5), 0.12,
-                            z + sin * 3 + (Math.random() - 0.5));
-    blownTrack.rotation.set(0.1, rotY + 0.5, 0.15);
-    scene.add(blownTrack); levelMeshes.push(blownTrack);
+
+    // Blown off track section (cosmetic chaos)
+    const blownTrack = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.15, 0.6), darkMetMat);
+    blownTrack.position.set(3.5 + (Math.random() - 0.5), 0.12, 2.5 + (Math.random() - 0.5));
+    blownTrack.rotation.set(0.1, 0.5, 0.15);
+    group.add(blownTrack);
+
+    // Apply group transforms
+    group.position.set(x, 0, z);
+    group.rotation.set(0, rotY, 0);
+    scene.add(group);
+    
+    const colliderMesh = new THREE.Mesh(new THREE.BoxGeometry(6.5, 2.5, 3.6), new THREE.MeshBasicMaterial());
+    colliderMesh.position.set(x, 1.2, z);
+    colliderMesh.rotation.set(0, rotY, 0);
+    colliderMesh.updateMatrixWorld();
+    collidables.push(new THREE.Box3().setFromObject(colliderMesh));
+    levelMeshes.push(group);
   }
 
   // Asymmetric vehicle placement
