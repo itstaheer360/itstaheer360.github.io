@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 /* ============================================================
    DEADZONE FPS Ã¢â‚¬â€ game.js
    3D First Person Shooter built with Three.js (r128)
@@ -248,6 +248,24 @@ function playGunshot() {
   lp.connect(gain);
   gain.connect(audioCtx.destination);
   src.start(now);
+}
+
+/** High metallic ricochet ping */
+function playRicochetSound() {
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  osc.type = 'sine';
+  const startFreq = 1800 + Math.random() * 1200;
+  osc.frequency.setValueAtTime(startFreq, now);
+  osc.frequency.exponentialRampToValueAtTime(320 + Math.random() * 200, now + 0.11);
+  g.gain.setValueAtTime(0.18, now);
+  g.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+  osc.connect(g);
+  g.connect(audioCtx.destination);
+  osc.start(now);
+  osc.stop(now + 0.11);
 }
 
 /** Lighter pop Ã¢â€ â€™ pistol shot */
@@ -3102,13 +3120,13 @@ function playerShoot() {
 
   const w = cw();
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ MELEE (bat) Ã¢â‚¬â€ charging handled by mousedown/mouseup, not here Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // â”€â”€â”€ MELEE (bat) â”€â”€â”€
   if (w.melee) return;
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ RANGED Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // â”€â”€â”€ RANGED â”€â”€â”€
   if (w.ammo <= 0 && !w.isReloading) return;
 
-  // Interrupt reload if firing and we have ammo (mainly for shotgun)
+  // Interrupt reload if firing and we have ammo
   if (w.isReloading) {
     if (w.ammo > 0) {
       w.isReloading = false;
@@ -3125,7 +3143,7 @@ function playerShoot() {
       }
       document.getElementById('reload-indicator').classList.add('hidden');
     } else {
-      return; // Still 0 ammo, can't interrupt to shoot
+      return;
     }
   }
 
@@ -3141,6 +3159,11 @@ function playerShoot() {
     muzzleFlash.material.opacity = 1;
     muzzleFlash.rotation.z = Math.random() * Math.PI;
     muzzleFlashTimer = 0.055;
+  }
+
+  // Realistic spent brass casing ejection on every shot (except shotgun which ejects on pump)
+  if (w.id !== 'shotgun' && gunGroup) {
+    spawnEjectedShell(gunGroup, w.id);
   }
 
   // Recoil kick applied to all weapons
@@ -3176,25 +3199,17 @@ function playerShoot() {
 
   document.getElementById('ammo-current').textContent = w.ammo;
 
-  // Hitscan raycast from screen centre
-  raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+  // Compute 3D world origin of the gun muzzle
+  const muzzleWorldPos = getPlayerMuzzleWorldPos();
 
-  // Find distance to closest wall
-  let closestWallDist = Infinity;
-  const pt = new THREE.Vector3();
-  for (const c of collidables) {
-    if (raycaster.ray.intersectBox(c, pt)) {
-      const d = pt.distanceTo(camera.position);
-      if (d < closestWallDist) closestWallDist = d;
-    }
-  }
+  // Raycaster from screen center (camera view)
+  raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
 
   const targets = [];
   enemies.forEach(e => {
     if (e.alive) e.group.traverse(c => { if (c.isMesh) targets.push(c); });
   });
 
-  // Calculate number of shots (shotgun shoots pellets)
   const isShotgun = w.id === 'shotgun';
   const numShots = isShotgun ? 8 : 1;
   const baseDir = raycaster.ray.direction.clone();
@@ -3209,31 +3224,76 @@ function playerShoot() {
     }
 
     raycaster.ray.direction.copy(shotDir);
-    const intersects = raycaster.intersectObjects(targets, false);
-    if (intersects.length > 0 && intersects[0].distance < closestWallDist) {
-      const hitObj = intersects[0].object;
+
+    // 1. Raycast against level collidables
+    let closestWallDist = Infinity;
+    let wallHitPoint = null;
+    let wallHitNormal = new THREE.Vector3(0, 1, 0);
+    const pt = new THREE.Vector3();
+    for (const c of collidables) {
+      if (raycaster.ray.intersectBox(c, pt)) {
+        const d = pt.distanceTo(camera.position);
+        if (d < closestWallDist) {
+          closestWallDist = d;
+          wallHitPoint = pt.clone();
+          wallHitNormal = getBoxHitNormal(c, pt);
+        }
+      }
+    }
+
+    // 2. Raycast against enemies
+    const enemyIntersects = raycaster.intersectObjects(targets, false);
+    let hitEnemy = null;
+    let enemyHitDist = Infinity;
+    let enemyHitPoint = null;
+    let isHeadshot = false;
+
+    if (enemyIntersects.length > 0 && enemyIntersects[0].distance < closestWallDist) {
+      const hitObj = enemyIntersects[0].object;
       for (const enemy of enemies) {
         if (!enemy.alive) continue;
         let matched = false;
         enemy.group.traverse(c => { if (c === hitObj) matched = true; });
         if (matched) {
-          // Headshot logic
-          const headshot = intersects[0].point.y > 1.3;
-          let dmg = w.damage;
-
-          if (headshot && w.id === 'deagle') {
-            dmg = 9999; // Instant kill
-          } else {
-            dmg += Math.floor(Math.random() * (isShotgun ? 5 : 18)) + (headshot ? (isShotgun ? 10 : 20) : 0);
-          }
-
-          enemy.takeDamage(dmg);
-          showHitMarker();
-          playHitSound();
-          break; // Next shot (pellet)
+          hitEnemy = enemy;
+          enemyHitDist = enemyIntersects[0].distance;
+          enemyHitPoint = enemyIntersects[0].point.clone();
+          isHeadshot = enemyHitPoint.y > 1.3;
+          break;
         }
       }
     }
+
+    // 3. Determine target impact point and trigger mechanics
+    let targetDist = 120;
+    let targetPoint = muzzleWorldPos.clone().addScaledVector(shotDir, 120);
+    let targetNormal = new THREE.Vector3(0, 1, 0);
+    let isEnemyHit = false;
+
+    if (hitEnemy && enemyHitPoint) {
+      targetDist = muzzleWorldPos.distanceTo(enemyHitPoint);
+      targetPoint = enemyHitPoint;
+      isEnemyHit = true;
+
+      // Damage calculation
+      let dmg = w.damage;
+      if (isHeadshot && w.id === 'deagle') {
+        dmg = 9999;
+      } else {
+        dmg += Math.floor(Math.random() * (isShotgun ? 5 : 18)) + (isHeadshot ? (isShotgun ? 10 : 20) : 0);
+      }
+
+      hitEnemy.takeDamage(dmg);
+      showHitMarker();
+      playHitSound();
+    } else if (wallHitPoint) {
+      targetDist = muzzleWorldPos.distanceTo(wallHitPoint);
+      targetPoint = wallHitPoint;
+      targetNormal = wallHitNormal;
+    }
+
+    // 4. Spawn high-velocity supersonic bullet projectile & tracer in 3D space
+    spawnPlayerBullet(w.id, muzzleWorldPos, shotDir, targetDist, targetPoint, targetNormal, isEnemyHit);
   }
 
   // Start shotgun pump animation
@@ -3244,7 +3304,7 @@ function playerShoot() {
     shotgunPumpSound2 = false;
   }
 
-  // UZI Recoil (add to pitch and shake)
+  // UZI Recoil
   if (w.id === 'uzi') {
     player.pitch = Math.min(1.45, player.pitch + 0.015);
     shakeIntensity = Math.min(0.08, shakeIntensity + 0.03);
@@ -3619,19 +3679,17 @@ function setupInput() {
   }
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-//  MOBILE TOUCH CONTROL SETUP
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ─── MOBILE TOUCH CONTROL SETUP ───────────────────────────
 function setupMobileControls() {
   const JOYSTICK_RADIUS = 50; // max distance knob travels
-  const LOOK_SENS = 4.5;      // pixels-per-radian multiplier for touch look
+  const LOOK_SENS = 4.5; // pixels-per-radian multiplier for touch look
 
   const joystickZone = document.getElementById('joystick-zone');
   const joystickBase = document.getElementById('joystick-base');
   const joystickKnob = document.getElementById('joystick-knob');
   const lookZone = document.getElementById('look-zone');
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬ Joystick Zone Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // ─── Joystick Zone ───────────────────────────────────────
   joystickZone.addEventListener('touchstart', e => {
     e.preventDefault();
     for (const t of e.changedTouches) {
@@ -4179,6 +4237,14 @@ function startGame() {
   // Ã¢â€â‚¬Ã¢â€â‚¬ Tear down previous level geometry
   levelMeshes.forEach(m => scene.remove(m));
   levelMeshes.length = 0;
+  playerBullets.forEach(b => scene.remove(b.mesh));
+  playerBullets.length = 0;
+  bulletSparks.forEach(s => scene.remove(s.mesh));
+  bulletSparks.length = 0;
+  impactSmokes.forEach(s => scene.remove(s.mesh));
+  impactSmokes.length = 0;
+  bulletHoles.forEach(h => scene.remove(h.mesh));
+  bulletHoles.length = 0;
   // Remove level-owned lights (directional/ambient are re-added per createLevel call)
   // Reset collidables to only the boundary entries; safest is to clear all static entries
   collidables.length = 0;
@@ -4389,47 +4455,176 @@ function cleanupAndGoMenu() {
   gameState = 'menu';
 }
 
+// â”€â”€â”€ PLAYER BULLETS, BALLISTICS & CASING EJECTION SYSTEM â”€â”€â”€
 const ejectedShells = [];
+const playerBullets = [];
+const bulletSparks = [];
+const impactSmokes = [];
+const bulletHoles = [];
 
-function spawnEjectedShell(wGroup) {
-  const brass = new THREE.MeshLambertMaterial({ color: 0xcc8800 });
-  const plastic = new THREE.MeshLambertMaterial({ color: 0xaa2211 });
+/** Compute the world position of the player's weapon muzzle */
+function getPlayerMuzzleWorldPos() {
+  const fwd = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation);
+  const rgt = new THREE.Vector3(1, 0, 0).applyEuler(camera.rotation);
+  const up = new THREE.Vector3(0, 1, 0).applyEuler(camera.rotation);
+
+  if (isAds) {
+    return camera.position.clone()
+      .addScaledVector(fwd, 0.75)
+      .addScaledVector(up, -0.05);
+  } else {
+    return camera.position.clone()
+      .addScaledVector(fwd, 0.68)
+      .addScaledVector(rgt, 0.22)
+      .addScaledVector(up, -0.14);
+  }
+}
+
+/** Compute outward face normal for an axis-aligned box collision */
+function getBoxHitNormal(box, pt) {
+  const center = new THREE.Vector3();
+  box.getCenter(center);
+  const size = new THREE.Vector3();
+  box.getSize(size);
+  const local = pt.clone().sub(center);
+  const half = size.clone().multiplyScalar(0.5);
+
+  const dx = Math.abs(Math.abs(local.x) - half.x);
+  const dy = Math.abs(Math.abs(local.y) - half.y);
+  const dz = Math.abs(Math.abs(local.z) - half.z);
+
+  const normal = new THREE.Vector3(0, 1, 0);
+  if (dx <= dy && dx <= dz) {
+    normal.set(Math.sign(local.x) || 1, 0, 0);
+  } else if (dy <= dx && dy <= dz) {
+    normal.set(0, Math.sign(local.y) || 1, 0);
+  } else {
+    normal.set(0, 0, Math.sign(local.z) || 1);
+  }
+  return normal;
+}
+
+/** Eject realistic spent brass shell casing matching real firearm caliber mechanics */
+function spawnEjectedShell(wGroup, weaponId = 'shotgun') {
+  if (!wGroup) return;
 
   const shellGroup = new THREE.Group();
+  let vel, rotVel, life = 1.6;
 
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.035, 8), plastic);
-  body.rotation.x = Math.PI / 2;
-  body.position.z = -0.01;
-  shellGroup.add(body);
+  if (weaponId === 'rifle') {
+    // 5.56x45mm NATO assault rifle brass casing
+    const brassMat = new THREE.MeshStandardMaterial({
+      color: 0xdfa028,
+      metalness: 0.92,
+      roughness: 0.22,
+    });
+    const primerMat = new THREE.MeshStandardMaterial({
+      color: 0xb87d20,
+      metalness: 0.85,
+      roughness: 0.35
+    });
 
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.0092, 0.0092, 0.015, 8), brass);
-  base.rotation.x = Math.PI / 2;
-  base.position.z = 0.015;
-  shellGroup.add(base);
+    // Casing body (tapered cartridge)
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.0058, 0.0064, 0.034, 10), brassMat);
+    body.rotation.x = Math.PI / 2;
+    body.position.z = -0.008;
+    shellGroup.add(body);
 
-  // Ejection port offset (right side of receiver)
-  const offset = new THREE.Vector3(0.05, 0.02, -0.10);
-  offset.applyEuler(wGroup.rotation);
+    // Bottleneck shoulder
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.0042, 0.0058, 0.008, 10), brassMat);
+    neck.rotation.x = Math.PI / 2;
+    neck.position.z = -0.028;
+    shellGroup.add(neck);
 
-  shellGroup.position.copy(wGroup.position).add(offset);
-  shellGroup.rotation.copy(wGroup.rotation);
+    // Extractor rim at base
+    const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.0068, 0.0068, 0.004, 10), primerMat);
+    rim.rotation.x = Math.PI / 2;
+    rim.position.z = 0.011;
+    shellGroup.add(rim);
+
+    // Ejection port position on assault rifle (right side receiver)
+    const offset = new THREE.Vector3(0.065, 0.03, -0.12);
+    offset.applyEuler(wGroup.rotation);
+    shellGroup.position.copy(wGroup.position).add(offset);
+    shellGroup.rotation.copy(wGroup.rotation);
+
+    // High velocity ejection: flips vigorously to the right (+X), up (+Y), and slightly back (+Z)
+    vel = new THREE.Vector3(
+      2.0 + Math.random() * 0.7,
+      1.1 + Math.random() * 0.5,
+      0.5 + Math.random() * 0.4
+    );
+
+    rotVel = new THREE.Vector3(
+      (Math.random() - 0.5) * 28,
+      (Math.random() - 0.5) * 24,
+      (Math.random() - 0.5) * 28
+    );
+  } else if (weaponId === 'shotgun') {
+    // 12-gauge shotgun shell
+    const brass = new THREE.MeshLambertMaterial({ color: 0xcc8800 });
+    const plastic = new THREE.MeshLambertMaterial({ color: 0xaa2211 });
+
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.035, 8), plastic);
+    body.rotation.x = Math.PI / 2;
+    body.position.z = -0.01;
+    shellGroup.add(body);
+
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.0092, 0.0092, 0.015, 8), brass);
+    base.rotation.x = Math.PI / 2;
+    base.position.z = 0.015;
+    shellGroup.add(base);
+
+    const offset = new THREE.Vector3(0.05, 0.02, -0.10);
+    offset.applyEuler(wGroup.rotation);
+    shellGroup.position.copy(wGroup.position).add(offset);
+    shellGroup.rotation.copy(wGroup.rotation);
+
+    vel = new THREE.Vector3(
+      1.3 + Math.random() * 0.5,
+      0.8 + Math.random() * 0.4,
+      0.3 + Math.random() * 0.3
+    );
+
+    rotVel = new THREE.Vector3(
+      Math.random() * 10 - 5,
+      Math.random() * 10 - 5,
+      Math.random() * 10 - 5
+    );
+  } else {
+    // Pistol / Uzi / Deagle / Sniper brass
+    const brassMat = new THREE.MeshStandardMaterial({
+      color: 0xdfa028,
+      metalness: 0.9,
+      roughness: 0.22,
+    });
+    const rad = (weaponId === 'deagle' || weaponId === 'sniper') ? 0.007 : 0.005;
+    const len = (weaponId === 'sniper') ? 0.042 : (weaponId === 'deagle' ? 0.028 : 0.02);
+
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(rad, rad, len, 8), brassMat);
+    body.rotation.x = Math.PI / 2;
+    shellGroup.add(body);
+
+    const offset = new THREE.Vector3(0.04, 0.02, -0.06);
+    offset.applyEuler(wGroup.rotation);
+    shellGroup.position.copy(wGroup.position).add(offset);
+    shellGroup.rotation.copy(wGroup.rotation);
+
+    vel = new THREE.Vector3(
+      1.6 + Math.random() * 0.6,
+      0.9 + Math.random() * 0.5,
+      0.4 + Math.random() * 0.3
+    );
+
+    rotVel = new THREE.Vector3(
+      (Math.random() - 0.5) * 24,
+      (Math.random() - 0.5) * 20,
+      (Math.random() - 0.5) * 24
+    );
+  }
 
   weaponScene.add(shellGroup);
-
-  // Eject outwards to the right (+X), slightly up (+Y), slightly back (+Z)
-  const vel = new THREE.Vector3(
-    1.2 + Math.random() * 0.5,
-    0.8 + Math.random() * 0.4,
-    0.3 + Math.random() * 0.3
-  );
-
-  const rotVel = new THREE.Vector3(
-    Math.random() * 8 - 4,
-    Math.random() * 8 - 4,
-    Math.random() * 8 - 4
-  );
-
-  ejectedShells.push({ mesh: shellGroup, vel, rotVel, life: 1.5 });
+  ejectedShells.push({ mesh: shellGroup, vel, rotVel, life });
 }
 
 function updateEjectedShells(dt) {
@@ -4439,7 +4634,7 @@ function updateEjectedShells(dt) {
     s.mesh.rotation.x += s.rotVel.x * dt;
     s.mesh.rotation.y += s.rotVel.y * dt;
     s.mesh.rotation.z += s.rotVel.z * dt;
-    s.vel.y -= 4.0 * dt; // Gravity in weaponScene space
+    s.vel.y -= 4.2 * dt; // Gravity in weaponScene space
     s.life -= dt;
     if (s.life <= 0) {
       weaponScene.remove(s.mesh);
@@ -4448,9 +4643,252 @@ function updateEjectedShells(dt) {
   }
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-//  MAIN GAME LOOP
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+/** Spawn 3D supersonic bullet projectile with luminous tracer streak */
+function spawnPlayerBullet(weaponId, startPos, dir, targetDist, targetPoint, targetNormal, isEnemy) {
+  const bulletGroup = new THREE.Group();
+
+  let tracerColor = 0xffe680;
+  let coreColor = 0xffffff;
+  let length = 0.65;
+  let radius = 0.020;
+  let speed = 210; // realistic assault rifle supersonic velocity feel
+
+  if (weaponId === 'rifle') {
+    tracerColor = 0xffbf44;
+    coreColor = 0xffffff;
+    length = 0.72;
+    radius = 0.024;
+    speed = 225;
+  } else if (weaponId === 'sniper') {
+    tracerColor = 0x88e0ff;
+    coreColor = 0xffffff;
+    length = 1.35;
+    radius = 0.028;
+    speed = 280;
+  } else if (weaponId === 'deagle') {
+    tracerColor = 0xffa033;
+    coreColor = 0xffffff;
+    length = 0.52;
+    radius = 0.030;
+    speed = 180;
+  } else if (weaponId === 'uzi') {
+    tracerColor = 0xffd466;
+    coreColor = 0xffffff;
+    length = 0.42;
+    radius = 0.016;
+    speed = 165;
+  } else if (weaponId === 'shotgun') {
+    tracerColor = 0xff8833;
+    coreColor = 0xffeedd;
+    length = 0.32;
+    radius = 0.016;
+    speed = 145;
+  }
+
+  // Glowing Tracer streak cylinder aligned with flight vector
+  const tracerGeo = new THREE.CylinderGeometry(radius * 0.35, radius, length, 8);
+  tracerGeo.rotateX(Math.PI / 2);
+  const tracerMat = new THREE.MeshBasicMaterial({
+    color: tracerColor,
+    transparent: true,
+    opacity: 0.95,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  });
+  const tracerMesh = new THREE.Mesh(tracerGeo, tracerMat);
+  tracerMesh.position.z = length * 0.5;
+  bulletGroup.add(tracerMesh);
+
+  // Bright incandescent core
+  const coreGeo = new THREE.CylinderGeometry(radius * 0.15, radius * 0.4, length * 0.75, 6);
+  coreGeo.rotateX(Math.PI / 2);
+  const coreMat = new THREE.MeshBasicMaterial({
+    color: coreColor,
+    transparent: true,
+    opacity: 1.0,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  });
+  const coreMesh = new THREE.Mesh(coreGeo, coreMat);
+  coreMesh.position.z = length * 0.5;
+  bulletGroup.add(coreMesh);
+
+  // Orient bullet in 3D flight direction
+  bulletGroup.position.copy(startPos);
+  bulletGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, -1), dir);
+
+  scene.add(bulletGroup);
+
+  playerBullets.push({
+    mesh: bulletGroup,
+    dir: dir.clone(),
+    speed: speed,
+    distanceTraveled: 0,
+    maxDistance: targetDist || 120,
+    targetPoint: targetPoint ? targetPoint.clone() : null,
+    targetNormal: targetNormal ? targetNormal.clone() : new THREE.Vector3(0, 1, 0),
+    isEnemy: !!isEnemy,
+    weaponId: weaponId,
+    life: 1.5
+  });
+}
+
+function updatePlayerBullets(dt) {
+  for (let i = playerBullets.length - 1; i >= 0; i--) {
+    const b = playerBullets[i];
+    const moveDist = b.speed * dt;
+    b.distanceTraveled += moveDist;
+    b.mesh.position.addScaledVector(b.dir, moveDist);
+    b.life -= dt;
+
+    if (b.distanceTraveled >= b.maxDistance || b.life <= 0) {
+      if (b.targetPoint) {
+        spawnBulletImpact(b.targetPoint, b.targetNormal, b.isEnemy, b.weaponId);
+      }
+      scene.remove(b.mesh);
+      playerBullets.splice(i, 1);
+    }
+  }
+}
+
+/** Spawn terminal ballistics impact: sparks, dust/smoke, bullet holes, or blood */
+function spawnBulletImpact(pos, normal, isEnemy, weaponId) {
+  if (isEnemy) {
+    // Blood / flesh particle burst
+    for (let i = 0; i < 12; i++) {
+      const p = new THREE.Mesh(
+        new THREE.BoxGeometry(0.045, 0.045, 0.045),
+        new THREE.MeshBasicMaterial({ color: Math.random() > 0.3 ? 0x880000 : 0xaa1111 })
+      );
+      p.position.copy(pos);
+      scene.add(p);
+      const vel = new THREE.Vector3(
+        (Math.random() - 0.5) * 3.5,
+        Math.random() * 3.5 + 1.2,
+        (Math.random() - 0.5) * 3.5
+      );
+      bulletSparks.push({ mesh: p, vel, gravity: -14, life: 0.35 + Math.random() * 0.2 });
+    }
+    return;
+  }
+
+  // Wall / surface ricochet sparks
+  playRicochetSound();
+
+  const numSparks = weaponId === 'rifle' ? 12 : (weaponId === 'sniper' ? 18 : 8);
+  for (let i = 0; i < numSparks; i++) {
+    const s = new THREE.Mesh(
+      new THREE.BoxGeometry(0.025, 0.025, 0.025),
+      new THREE.MeshBasicMaterial({
+        color: Math.random() > 0.35 ? 0xffcc33 : 0xff8811,
+        transparent: true,
+        opacity: 1
+      })
+    );
+    s.position.copy(pos).addScaledVector(normal, 0.02);
+    scene.add(s);
+
+    const vel = normal.clone()
+      .multiplyScalar(3.5 + Math.random() * 4.5)
+      .add(new THREE.Vector3(
+        (Math.random() - 0.5) * 4,
+        (Math.random() - 0.5) * 4,
+        (Math.random() - 0.5) * 4
+      ));
+
+    bulletSparks.push({ mesh: s, vel, gravity: -18, life: 0.22 + Math.random() * 0.25 });
+  }
+
+  // Impact dust / smoke cloud
+  for (let i = 0; i < 3; i++) {
+    const smokeGeo = new THREE.PlaneGeometry(0.14, 0.14);
+    const smokeMat = new THREE.MeshBasicMaterial({
+      color: 0xc8b89e,
+      transparent: true,
+      opacity: 0.6,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
+    const sm = new THREE.Mesh(smokeGeo, smokeMat);
+    sm.position.copy(pos).addScaledVector(normal, 0.04);
+    sm.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+    scene.add(sm);
+    const vel = normal.clone().multiplyScalar(0.8 + Math.random() * 0.8).add(new THREE.Vector3(
+      (Math.random() - 0.5) * 0.5,
+      Math.random() * 0.5,
+      (Math.random() - 0.5) * 0.5
+    ));
+    impactSmokes.push({ mesh: sm, vel, scaleRate: 2.2, life: 0.35 + Math.random() * 0.2, maxLife: 0.5 });
+  }
+
+  // Bullet Hole Decal on solid surfaces
+  if (bulletHoles.length > 60) {
+    const old = bulletHoles.shift();
+    scene.remove(old.mesh);
+  }
+  const holeGeo = new THREE.PlaneGeometry(0.09, 0.09);
+  const holeMat = new THREE.MeshBasicMaterial({
+    color: 0x111111,
+    transparent: true,
+    opacity: 0.9,
+    depthWrite: false,
+    side: THREE.DoubleSide
+  });
+  const holeMesh = new THREE.Mesh(holeGeo, holeMat);
+  holeMesh.position.copy(pos).addScaledVector(normal, 0.008);
+  holeMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
+  scene.add(holeMesh);
+  bulletHoles.push({ mesh: holeMesh, life: 10.0 });
+}
+
+function updateBulletSparks(dt) {
+  for (let i = bulletSparks.length - 1; i >= 0; i--) {
+    const sp = bulletSparks[i];
+    sp.vel.y += sp.gravity * dt;
+    sp.mesh.position.addScaledVector(sp.vel, dt);
+    sp.life -= dt;
+    if (sp.mesh.material && sp.mesh.material.opacity !== undefined) {
+      sp.mesh.material.opacity = Math.max(0, sp.life / 0.35);
+    }
+    if (sp.life <= 0) {
+      scene.remove(sp.mesh);
+      bulletSparks.splice(i, 1);
+    }
+  }
+}
+
+function updateImpactSmokes(dt) {
+  for (let i = impactSmokes.length - 1; i >= 0; i--) {
+    const sm = impactSmokes[i];
+    sm.mesh.position.addScaledVector(sm.vel, dt);
+    const s = 1 + sm.scaleRate * dt;
+    sm.mesh.scale.multiplyScalar(s);
+    sm.life -= dt;
+    if (sm.mesh.material) {
+      sm.mesh.material.opacity = Math.max(0, (sm.life / sm.maxLife) * 0.6);
+    }
+    if (sm.life <= 0) {
+      scene.remove(sm.mesh);
+      impactSmokes.splice(i, 1);
+    }
+  }
+}
+
+function updateBulletHoles(dt) {
+  for (let i = bulletHoles.length - 1; i >= 0; i--) {
+    const h = bulletHoles[i];
+    h.life -= dt;
+    if (h.life < 2.0 && h.mesh.material) {
+      h.mesh.material.opacity = Math.max(0, h.life / 2.0) * 0.9;
+    }
+    if (h.life <= 0) {
+      scene.remove(h.mesh);
+      bulletHoles.splice(i, 1);
+    }
+  }
+}
+
+// â”€â”€â”€ MAIN GAME LOOP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function gameLoop() {
   requestAnimationFrame(gameLoop);
   const dt = Math.min(clock.getDelta(), 0.05); // cap at 50 ms to prevent spiral-of-death
@@ -4467,6 +4905,10 @@ function gameLoop() {
     }
 
     updateProjectiles(dt);
+    updatePlayerBullets(dt);
+    updateBulletSparks(dt);
+    updateImpactSmokes(dt);
+    updateBulletHoles(dt);
     updateEjectedShells(dt);
   }
 
