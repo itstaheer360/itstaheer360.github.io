@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 /* ============================================================
    DEADZONE FPS Ã¢â‚¬â€ game.js
    3D First Person Shooter built with Three.js (r128)
@@ -106,6 +106,11 @@ const player = {
 
 let playerVelY = 0;    // vertical velocity (gravity)
 const GRAVITY = -20;
+const JUMP_SPEED = 8.5; // initial upward velocity on jump
+let isOnGround = false; // true when player is standing on floor
+
+/** @type {Array<{group: THREE.Group, hp: number, maxHp: number, destroyed: boolean, colliderBox: THREE.Box3, particles: Array, fireTimers: Array}>} */
+const vehicles = [];
 
 // Weapon refs
 let gunGroup, muzzleFlash;
@@ -157,6 +162,58 @@ const raycaster = new THREE.Raycaster();
 
 // Audio context
 let audioCtx;
+
+/** Jump whoosh sound */
+function playJumpSound() {
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  const len = Math.floor(audioCtx.sampleRate * 0.12);
+  const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) {
+    data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 0.8) * 0.18;
+  }
+  const src = audioCtx.createBufferSource();
+  src.buffer = buf;
+  const bp = audioCtx.createBiquadFilter();
+  bp.type = 'bandpass'; bp.frequency.value = 500; bp.Q.value = 0.6;
+  const g = audioCtx.createGain();
+  g.gain.setValueAtTime(0.22, now);
+  g.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+  src.connect(bp); bp.connect(g); g.connect(audioCtx.destination);
+  src.start(now);
+}
+
+/** Deep explosion boom */
+function playExplosionSound() {
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  const len = Math.floor(audioCtx.sampleRate * 0.55);
+  const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) {
+    data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 1.1);
+  }
+  const src = audioCtx.createBufferSource();
+  src.buffer = buf;
+  const lp = audioCtx.createBiquadFilter();
+  lp.type = 'lowpass'; lp.frequency.value = 350;
+  const g = audioCtx.createGain();
+  g.gain.setValueAtTime(2.0, now);
+  g.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+  src.connect(lp); lp.connect(g); g.connect(audioCtx.destination);
+  src.start(now);
+  // Sharp crack overtone
+  const osc = audioCtx.createOscillator();
+  const og = audioCtx.createGain();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(180, now);
+  osc.frequency.exponentialRampToValueAtTime(30, now + 0.35);
+  og.gain.setValueAtTime(0.7, now);
+  og.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+  osc.connect(og); og.connect(audioCtx.destination);
+  osc.start(now); osc.stop(now + 0.35);
+}
 
 // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 //  AUDIO  (Web Audio API Ã¢â‚¬â€ no external files needed)
@@ -999,9 +1056,21 @@ function createBattlefieldLevel() {
     colliderMesh.position.set(x, 0.9 + yOff, z);
     colliderMesh.rotation.set(bRoll, rotY, 0);
     colliderMesh.updateMatrixWorld();
-    collidables.push(new THREE.Box3().setFromObject(colliderMesh));
+    const jeepBox = new THREE.Box3().setFromObject(colliderMesh);
+    collidables.push(jeepBox);
     
     levelMeshes.push(group);
+
+    // Register as destructible vehicle
+    vehicles.push({
+      group,
+      hp: 120, maxHp: 120,
+      destroyed: false,
+      colliderBox: jeepBox,
+      collidableIdx: collidables.length - 1,
+      particles: [],
+      fireTimers: []
+    });
   }
 
   // APC
@@ -1090,8 +1159,20 @@ function createBattlefieldLevel() {
     colliderMesh.position.set(x, 1.6, z);
     colliderMesh.rotation.set(0, rotY, 0);
     colliderMesh.updateMatrixWorld();
-    collidables.push(new THREE.Box3().setFromObject(colliderMesh));
+    const apcBox = new THREE.Box3().setFromObject(colliderMesh);
+    collidables.push(apcBox);
     levelMeshes.push(group);
+
+    // Register as destructible vehicle
+    vehicles.push({
+      group,
+      hp: 250, maxHp: 250,
+      destroyed: false,
+      colliderBox: apcBox,
+      collidableIdx: collidables.length - 1,
+      particles: [],
+      fireTimers: []
+    });
   }
 
   // TRUCK
@@ -1199,8 +1280,20 @@ function createBattlefieldLevel() {
     colliderMesh.position.set(x, 1.5, z);
     colliderMesh.rotation.set(0, rotY, 0);
     colliderMesh.updateMatrixWorld();
-    collidables.push(new THREE.Box3().setFromObject(colliderMesh));
+    const truckBox = new THREE.Box3().setFromObject(colliderMesh);
+    collidables.push(truckBox);
     levelMeshes.push(group);
+
+    // Register as destructible vehicle
+    vehicles.push({
+      group,
+      hp: 180, maxHp: 180,
+      destroyed: false,
+      colliderBox: truckBox,
+      collidableIdx: collidables.length - 1,
+      particles: [],
+      fireTimers: []
+    });
   }
 
   // TANK HULK
@@ -1287,8 +1380,20 @@ function createBattlefieldLevel() {
     colliderMesh.position.set(x, 1.2, z);
     colliderMesh.rotation.set(0, rotY, 0);
     colliderMesh.updateMatrixWorld();
-    collidables.push(new THREE.Box3().setFromObject(colliderMesh));
+    const tankBox = new THREE.Box3().setFromObject(colliderMesh);
+    collidables.push(tankBox);
     levelMeshes.push(group);
+
+    // Register as destructible vehicle
+    vehicles.push({
+      group,
+      hp: 400, maxHp: 400,
+      destroyed: false,
+      colliderBox: tankBox,
+      collidableIdx: collidables.length - 1,
+      particles: [],
+      fireTimers: []
+    });
   }
 
   // Asymmetric vehicle placement
