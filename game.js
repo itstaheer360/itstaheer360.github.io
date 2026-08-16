@@ -250,24 +250,6 @@ function playGunshot() {
   src.start(now);
 }
 
-/** High metallic ricochet ping */
-function playRicochetSound() {
-  if (!audioCtx) return;
-  const now = audioCtx.currentTime;
-  const osc = audioCtx.createOscillator();
-  const g = audioCtx.createGain();
-  osc.type = 'sine';
-  const startFreq = 1800 + Math.random() * 1200;
-  osc.frequency.setValueAtTime(startFreq, now);
-  osc.frequency.exponentialRampToValueAtTime(320 + Math.random() * 200, now + 0.11);
-  g.gain.setValueAtTime(0.18, now);
-  g.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
-  osc.connect(g);
-  g.connect(audioCtx.destination);
-  osc.start(now);
-  osc.stop(now + 0.11);
-}
-
 /** Lighter pop Ã¢â€ â€™ pistol shot */
 function playPistolShot() {
   if (!audioCtx) return;
@@ -2629,9 +2611,9 @@ class Enemy {
           r.lArmVelY *= -GROUND_BOUNCE;
         }
 
-        // Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
-        //  RIGHT ARM Ã¢â‚¬â€ swings loose from shoulder
-        // Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
+        // ---------------------------------------------
+        //  RIGHT ARM — swings loose from shoulder
+        // ---------------------------------------------
         r.rArmVelX += GRAVITY_TORQUE * 0.5 * dt;
         r.rArmVelX *= (1 - DAMPING * dt);
         r.rArmVelZ *= (1 - DAMPING * 0.9 * dt);
@@ -3047,15 +3029,18 @@ function updateWeaponHUD() {
   });
 
   const ammoSection = document.getElementById('ammo-section');
+  const ammoSep = document.querySelector('.ammo-sep');
   if (w.melee) {
-    ammoSection.style.opacity = '0.35';
-    document.getElementById('ammo-current').textContent = 'Ã¢Ë†Å¾';
+    ammoSection.style.opacity = '0.7';
+    document.getElementById('ammo-current').textContent = '\u221E';
     document.getElementById('ammo-reserve').textContent = '';
+    if (ammoSep) ammoSep.style.display = 'none';
     document.getElementById('reload-indicator').classList.add('hidden');
   } else {
     ammoSection.style.opacity = '1';
     document.getElementById('ammo-current').textContent = w.ammo;
     document.getElementById('ammo-reserve').textContent = w.reserveAmmo;
+    if (ammoSep) ammoSep.style.display = 'inline';
   }
 }
 
@@ -3338,7 +3323,7 @@ function finishReload() {
   w.reserveAmmo -= taken;
 
   document.getElementById('ammo-current').textContent = w.ammo;
-  document.getElementById('ammo-reserve').textContent = w.reserveAmmo;
+    document.getElementById('ammo-reserve').textContent = w.reserveAmmo; const sep = document.querySelector('.ammo-sep'); if (sep) sep.style.display = 'inline';
 
   if (isShotgun && w.ammo < w.maxAmmo && w.reserveAmmo > 0) {
     // Shotgun needs to load more shells. Restart the reload cycle immediately.
@@ -4773,7 +4758,6 @@ function spawnBulletImpact(pos, normal, isEnemy, weaponId) {
   }
 
   // Wall / surface ricochet sparks
-  playRicochetSound();
 
   const numSparks = weaponId === 'rifle' ? 12 : (weaponId === 'sniper' ? 18 : 8);
   for (let i = 0; i < numSparks; i++) {
