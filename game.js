@@ -33,6 +33,9 @@ let enemyProjectiles = [];
 /** @type {THREE.Box3[]} - Static level collidables */
 const collidables = [];
 
+/** @type {Array<{cx: number, cz: number, rotY: number, segments: Array}>} - Tight oriented vehicle colliders */
+const vehicleColliders = [];
+
 /** Track all level-geometry meshes so we can clear them between map loads */
 const levelMeshes = [];
 
@@ -514,6 +517,13 @@ function makeBrickTexture(repeatX, repeatY) {
     }
   }
 
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(repeatX || 1, repeatY || 1);
+  return tex;
+}
+
 /** Heavy wet squelch, bone crunch & gore splatter */
 function playGoreHeadPopSound() {
   if (!audioCtx) return;
@@ -564,13 +574,6 @@ function playGoreHeadPopSound() {
   wg.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
   wSrc.connect(bp); bp.connect(wg); wg.connect(audioCtx.destination);
   wSrc.start(now + 0.04);
-}
-
-  const tex = new THREE.CanvasTexture(c);
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(repeatX || 1, repeatY || 1);
-  return tex;
 }
 
 // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
@@ -1029,22 +1032,7 @@ function createBattlefieldLevel() {
   sandbagCluster(28, -10, 5, 3.5);
   // Tight, multi-segment vehicle collider generator (avoids oversized empty-air AABB on rotated meshes)
   function addTightVehicleColliders(cx, cz, rotY, segments) {
-    const cos = Math.cos(rotY);
-    const sin = Math.sin(rotY);
-    segments.forEach(seg => {
-      const lx = seg.lx || 0;
-      const lz = seg.lz || 0;
-      const wx = cx + lx * cos - lz * sin;
-      const wz = cz + lx * sin + lz * cos;
-      const wy = seg.y !== undefined ? seg.y : (seg.h / 2);
-
-      const cMesh = new THREE.Mesh(new THREE.BoxGeometry(seg.w, seg.h, seg.d), new THREE.MeshBasicMaterial());
-      cMesh.position.set(wx, wy, wz);
-      cMesh.rotation.set(0, rotY, 0);
-      cMesh.updateMatrixWorld();
-      const b3 = new THREE.Box3().setFromObject(cMesh);
-      collidables.push(b3);
-    });
+    vehicleColliders.push({ cx, cz, rotY, segments });
   }
 
   // JEEP
@@ -2959,11 +2947,11 @@ class Enemy {
     enemyProjectiles.push({ mesh: proj, dir, speed: 17, life: 4.5, damage: this.damage });
   }
 
-  takeDamage(dmg, isHeadshot = false, shotDir = null, hitPoint = null) {
+  takeDamage(dmg, canDecapitate = false, shotDir = null, hitPoint = null) {
     if (!this.alive) return;
 
-    if (isHeadshot) {
-      // Headshots bypass armor and deal direct critical damage
+    if (canDecapitate) {
+      // Shotgun headshots bypass armor and deal direct critical damage
       this.armor = 0;
       if (this.armorFill) this.armorFill.style.width = '0%';
       this.hp = Math.max(0, this.hp - dmg);
@@ -2987,7 +2975,7 @@ class Enemy {
     if (this.hpFill) this.hpFill.style.width = ((this.hp / this.maxHp) * 100) + '%';
 
     if (this.hp <= 0) {
-      if (isHeadshot && !this.headDestroyed) {
+      if (canDecapitate && !this.headDestroyed) {
         this.explodeHead(shotDir, hitPoint);
       } else {
         this._die();
@@ -3147,8 +3135,33 @@ function playerCollidesAt(x, y, z) {
     new THREE.Vector3(x - RADIUS, y - player.eyeHeight + 0.1, z - RADIUS),
     new THREE.Vector3(x + RADIUS, y + 0.08, z + RADIUS)
   );
-  for (const c of collidables) {
-    if (box.intersectsBox(c)) return true;
+  for (let i = 0; i < collidables.length; i++) {
+    if (box.intersectsBox(collidables[i])) return true;
+  }
+
+  // Exact oriented vehicle bounding collision (no ghost-wall padding at any angle)
+  for (let i = 0; i < vehicleColliders.length; i++) {
+    const vc = vehicleColliders[i];
+    const dx = x - vc.cx;
+    const dz = z - vc.cz;
+    const cos = Math.cos(-vc.rotY);
+    const sin = Math.sin(-vc.rotY);
+    const lx = dx * cos - dz * sin;
+    const lz = dx * sin + dz * cos;
+
+    for (let s = 0; s < vc.segments.length; s++) {
+      const seg = vc.segments[s];
+      const slx = seg.lx || 0;
+      const slz = seg.lz || 0;
+      const minX = slx - seg.w / 2;
+      const maxX = slx + seg.w / 2;
+      const minZ = slz - seg.d / 2;
+      const maxZ = slz + seg.d / 2;
+
+      if (lx + RADIUS > minX && lx - RADIUS < maxX && lz + RADIUS > minZ && lz - RADIUS < maxZ) {
+        return true;
+      }
+    }
   }
   return false;
 }
@@ -3287,12 +3300,9 @@ function performBatSwing(isCharged) {
       enemy.group.traverse(c => { if (c === hitObj) matched = true; });
       if (matched) {
         const hitPt = intersects[0].point.clone();
-        const isHead = hitPt.y > 1.3;
         const swingDir = camera.getWorldDirection(new THREE.Vector3());
-        if (isCharged && isHead && !enemy.headDestroyed) {
-          enemy.explodeHead(swingDir, hitPt);
-        }
-        enemy.takeDamage(damage, isHead, swingDir, hitPt);
+        // Only shotgun can decapitate heads - bat deals heavy blunt damage with head intact
+        enemy.takeDamage(damage, false, swingDir, hitPt);
         showHitMarker();
         shakeIntensity = isCharged ? 0.22 : 0.08;
         break;
@@ -3433,6 +3443,52 @@ function playerShoot() {
       }
     }
 
+    // Also raycast against exact oriented vehicle colliders
+    for (let v = 0; v < vehicleColliders.length; v++) {
+      const vc = vehicleColliders[v];
+      const localRay = raycaster.ray.clone();
+      localRay.origin.x -= vc.cx;
+      localRay.origin.z -= vc.cz;
+      const cos = Math.cos(-vc.rotY);
+      const sin = Math.sin(-vc.rotY);
+
+      const lox = localRay.origin.x * cos - localRay.origin.z * sin;
+      const loz = localRay.origin.x * sin + localRay.origin.z * cos;
+      localRay.origin.x = lox;
+      localRay.origin.z = loz;
+
+      const ldx = localRay.direction.x * cos - localRay.direction.z * sin;
+      const ldz = localRay.direction.x * sin + localRay.direction.z * cos;
+      localRay.direction.x = ldx;
+      localRay.direction.z = ldz;
+
+      const lpt = new THREE.Vector3();
+      for (let s = 0; s < vc.segments.length; s++) {
+        const seg = vc.segments[s];
+        const slx = seg.lx || 0;
+        const slz = seg.lz || 0;
+        const minH = seg.y !== undefined ? (seg.y - seg.h / 2) : 0;
+        const maxH = seg.y !== undefined ? (seg.y + seg.h / 2) : (seg.h || 2.0);
+        const segBox = new THREE.Box3(
+          new THREE.Vector3(slx - seg.w / 2, minH, slz - seg.d / 2),
+          new THREE.Vector3(slx + seg.w / 2, maxH, slz + seg.d / 2)
+        );
+        if (localRay.intersectBox(segBox, lpt)) {
+          const wCos = Math.cos(vc.rotY);
+          const wSin = Math.sin(vc.rotY);
+          const wx = vc.cx + lpt.x * wCos - lpt.z * wSin;
+          const wz = vc.cz + lpt.x * wSin + lpt.z * wCos;
+          const worldHitPt = new THREE.Vector3(wx, lpt.y, wz);
+          const d = worldHitPt.distanceTo(camera.position);
+          if (d < closestWallDist) {
+            closestWallDist = d;
+            wallHitPoint = worldHitPt;
+            wallHitNormal = new THREE.Vector3(0, 1, 0);
+          }
+        }
+      }
+    }
+
     // 2. Raycast against enemies
     const enemyIntersects = raycaster.intersectObjects(targets, false);
     let hitEnemy = null;
@@ -3471,19 +3527,26 @@ function playerShoot() {
       let dmg = w.damage;
       const isCloseShotgun = isShotgun && targetDist < 7.5;
 
-      if (isHeadshot && (w.id === 'deagle' || w.id === 'sniper')) {
-        dmg = 9999;
-      } else if (isHeadshot && isCloseShotgun) {
-        dmg = 9999; // Instakill close-range shotgun decapitation
+      if (isHeadshot && isShotgun) {
+        dmg = isCloseShotgun ? 9999 : (dmg + 30);
+      } else if (isHeadshot) {
+        if (w.id === 'sniper') {
+          dmg = 9999; // Sniper is lethal headshot kill with head intact
+        } else if (w.id === 'deagle') {
+          dmg = 125;
+        } else {
+          dmg += Math.floor(Math.random() * 15) + 30;
+        }
       } else {
-        dmg += Math.floor(Math.random() * (isShotgun ? 5 : 18)) + (isHeadshot ? (isShotgun ? 25 : 35) : 0);
+        dmg += Math.floor(Math.random() * (isShotgun ? 5 : 18));
       }
 
-      // Close-range shotgun or high-power headshot decapitation & gore explosion
-      if (isHeadshot && (isCloseShotgun || w.id === 'deagle' || w.id === 'sniper' || hitEnemy.hp <= dmg) && !hitEnemy.headDestroyed) {
+      // ONLY THE SHOTGUN CAN DECAPITATE A HEAD (realistic gore mechanics)
+      const canDecapitate = isHeadshot && isShotgun;
+      if (canDecapitate && (isCloseShotgun || hitEnemy.hp <= dmg) && !hitEnemy.headDestroyed) {
         hitEnemy.explodeHead(shotDir, enemyHitPoint);
       }
-      hitEnemy.takeDamage(dmg, isHeadshot, shotDir, enemyHitPoint);
+      hitEnemy.takeDamage(dmg, canDecapitate, shotDir, enemyHitPoint);
       showHitMarker();
       playHitSound();
     } else if (wallHitPoint) {
@@ -4461,6 +4524,7 @@ function startGame() {
   // Remove level-owned lights (directional/ambient are re-added per createLevel call)
   // Reset collidables to only the boundary entries; safest is to clear all static entries
   collidables.length = 0;
+  vehicleColliders.length = 0;
 
   // Rebuild level for selected map
   createLevel(selectedMap);
@@ -4585,7 +4649,10 @@ function checkWaveComplete() {
   const alive = enemies.filter(e => e.alive).length;
   if (alive > 0) return;
 
-  // All enemies dead
+  // All enemies dead - restore player to full max health
+  player.health = player.maxHealth;
+  updateHealthHUD();
+
   gameState = 'wavecomplete';
   if (!isMobile) document.exitPointerLock();
   document.getElementById('click-to-start').style.display = 'none';
@@ -4607,8 +4674,8 @@ function checkWaveComplete() {
       document.getElementById('wave-complete').classList.add('hidden');
       wave++;
 
-      // Between-wave bonuses
-      player.health = Math.min(player.maxHealth, player.health + 25);
+      // Full health restoration after every wave
+      player.health = player.maxHealth;
 
       // Cancel any active reload
       const w = cw();
