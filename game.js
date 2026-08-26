@@ -5499,6 +5499,7 @@ function spawnBloodPuddle(x, z, radius = 0.2) {
   bloodPuddles.push({ mesh: puddle, life: 16.0 });
 }
 
+
 function updateBloodPuddles(dt) {
   for (let i = bloodPuddles.length - 1; i >= 0; i--) {
     const p = bloodPuddles[i];
@@ -6583,8 +6584,8 @@ function adminToggleInfiniteAmmo() {
   const ammoBtn = document.getElementById('admin-ammo-btn');
   if (isInfiniteAmmo) {
     if (ammoBtn) ammoBtn.classList.add('active');
-    weapons.forEach(w => { w.currentAmmo = w.magSize; w.reserveAmmo = 999; });
-    updateAmmoHUD();
+    WEAPONS.forEach(w => { w.ammo = w.maxAmmo; w.reserveAmmo = 999; });
+    updateWeaponHUD();
   } else {
     if (ammoBtn) ammoBtn.classList.remove('active');
   }
