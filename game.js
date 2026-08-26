@@ -3404,6 +3404,9 @@ function playerShoot() {
   // Compute 3D world origin of the gun muzzle
   const muzzleWorldPos = getPlayerMuzzleWorldPos();
 
+  // Spawn expanding gunpowder smoke from the barrel tip
+  spawnMuzzleSmoke(w.id, muzzleWorldPos, camera.getWorldDirection(new THREE.Vector3()));
+
   // Raycaster from screen center (camera view)
   raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
 
@@ -4517,10 +4520,11 @@ function startGame() {
   ejectedShells.forEach(s => {
     if (weaponScene) {
       weaponScene.remove(s.mesh);
-      if (s.smoke) weaponScene.remove(s.smoke);
     }
   });
   ejectedShells.length = 0;
+  muzzleSmokes.forEach(s => scene.remove(s.mesh));
+  muzzleSmokes.length = 0;
   // Remove level-owned lights (directional/ambient are re-added per createLevel call)
   // Reset collidables to only the boundary entries; safest is to clear all static entries
   collidables.length = 0;
@@ -4731,12 +4735,15 @@ function cleanupAndGoMenu() {
   enemyProjectiles = [];
   ejectedShells.forEach(s => weaponScene.remove(s.mesh));
   ejectedShells.length = 0;
+  muzzleSmokes.forEach(s => scene.remove(s.mesh));
+  muzzleSmokes.length = 0;
   if (!isMobile) document.exitPointerLock();
   gameState = 'menu';
 }
 
 // â”€â”€â”€ PLAYER BULLETS, BALLISTICS & CASING EJECTION SYSTEM â”€â”€â”€
 const ejectedShells = [];
+const muzzleSmokes = [];
 const playerBullets = [];
 const bulletSparks = [];
 const impactSmokes = [];
@@ -5442,18 +5449,9 @@ function spawnEjectedShell(wGroup, weaponId = 'shotgun') {
   shellGroup.position.copy(wGroup.position).add(offset);
   shellGroup.rotation.copy(wGroup.rotation);
 
-  // Faint hot gunpowder smoke wisp trailing from the spent casing
-  const smokeWisp = new THREE.Mesh(
-    new THREE.SphereGeometry(0.008, 6, 6),
-    SHELL_MATS.smoke.clone()
-  );
-  smokeWisp.position.copy(shellGroup.position);
-  weaponScene.add(smokeWisp);
-
   weaponScene.add(shellGroup);
   ejectedShells.push({
     mesh: shellGroup,
-    smoke: smokeWisp,
     vel,
     rotVel,
     life,
@@ -5474,18 +5472,75 @@ function updateEjectedShells(dt) {
     s.vel.z *= Math.max(0, 1 - dt * 0.35);
     s.vel.y -= 4.6 * dt; // Gravity in weaponScene space
 
-    // Dissipating chamber smoke puff
-    if (s.smoke) {
-      s.smoke.position.y += 0.08 * dt;
-      s.smoke.scale.addScalar(dt * 1.8);
-      s.smoke.material.opacity = Math.max(0, (s.life / s.maxLife) * 0.35);
-    }
-
     s.life -= dt;
     if (s.life <= 0) {
       weaponScene.remove(s.mesh);
-      if (s.smoke) weaponScene.remove(s.smoke);
       ejectedShells.splice(i, 1);
+    }
+  }
+}
+
+/** Spawn realistic gunpowder barrel smoke billowing forward from the muzzle tip */
+function spawnMuzzleSmoke(weaponId, muzzlePos, shotDir) {
+  const isShotgun = weaponId === 'shotgun';
+  const numPuffs = isShotgun ? 4 : 2;
+
+  for (let i = 0; i < numPuffs; i++) {
+    const radius = 0.035 + Math.random() * 0.035;
+    const smokeGeo = new THREE.SphereGeometry(radius, 6, 6);
+    const smokeMat = new THREE.MeshBasicMaterial({
+      color: 0xcccccc,
+      transparent: true,
+      opacity: 0.38,
+      depthWrite: false
+    });
+    const puff = new THREE.Mesh(smokeGeo, smokeMat);
+
+    // Position at the muzzle barrel tip with subtle forward/radial offset
+    puff.position.copy(muzzlePos).addScaledVector(shotDir, 0.08 + Math.random() * 0.12).add(new THREE.Vector3(
+      (Math.random() - 0.5) * 0.05,
+      (Math.random() - 0.5) * 0.05,
+      (Math.random() - 0.5) * 0.05
+    ));
+
+    scene.add(puff);
+
+    // Billowing forward blast with thermal buoyancy
+    const fwdSpd = isShotgun ? (3.5 + Math.random() * 3.0) : (2.2 + Math.random() * 1.8);
+    const vel = shotDir.clone().multiplyScalar(fwdSpd).add(new THREE.Vector3(
+      (Math.random() - 0.5) * 0.6,
+      0.5 + Math.random() * 0.7,
+      (Math.random() - 0.5) * 0.6
+    ));
+
+    const life = 0.45 + Math.random() * 0.30;
+    muzzleSmokes.push({
+      mesh: puff,
+      vel,
+      expandRate: 2.8 + Math.random() * 1.8,
+      life,
+      maxLife: life
+    });
+  }
+}
+
+function updateMuzzleSmokes(dt) {
+  for (let i = muzzleSmokes.length - 1; i >= 0; i--) {
+    const s = muzzleSmokes[i];
+    s.mesh.position.addScaledVector(s.vel, dt);
+    s.vel.multiplyScalar(Math.max(0, 1 - dt * 5.5)); // Aerodynamic drag
+    s.vel.y += 0.35 * dt; // Upward thermal rise
+
+    s.mesh.scale.addScalar(dt * s.expandRate);
+    s.life -= dt;
+
+    if (s.mesh.material) {
+      s.mesh.material.opacity = Math.max(0, (s.life / s.maxLife) * 0.38);
+    }
+
+    if (s.life <= 0) {
+      scene.remove(s.mesh);
+      muzzleSmokes.splice(i, 1);
     }
   }
 }
@@ -5758,6 +5813,7 @@ function gameLoop() {
     updateGoreGibs(dt);
     updateBloodFountain(dt);
     updateBloodPuddles(dt);
+    updateMuzzleSmokes(dt);
     updateEjectedShells(dt);
   }
 
