@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 /* ============================================================
    DEADZONE FPS Ã¢â‚¬â€ game.js
    3D First Person Shooter built with Three.js (r128)
@@ -513,6 +513,58 @@ function makeBrickTexture(repeatX, repeatY) {
       ctx.fillRect(x + off + m / 2, y + m / 2, bw - m, bh - m);
     }
   }
+
+/** Heavy wet squelch, bone crunch & gore splatter */
+function playGoreHeadPopSound() {
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+
+  // 1. Meaty low-end impact thud
+  const len = Math.floor(audioCtx.sampleRate * 0.45);
+  const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+  const dat = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) {
+    dat[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 1.4) * 0.95;
+  }
+  const src = audioCtx.createBufferSource();
+  src.buffer = buf;
+  const lp = audioCtx.createBiquadFilter();
+  lp.type = 'lowpass'; lp.frequency.setValueAtTime(450, now);
+  lp.frequency.exponentialRampToValueAtTime(80, now + 0.35);
+  const g = audioCtx.createGain();
+  g.gain.setValueAtTime(2.0, now);
+  g.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+  src.connect(lp); lp.connect(g); g.connect(audioCtx.destination);
+  src.start(now);
+
+  // 2. Bone crunch / tear snap (sawtooth sweep)
+  const osc = audioCtx.createOscillator();
+  const og = audioCtx.createGain();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(340, now);
+  osc.frequency.exponentialRampToValueAtTime(40, now + 0.22);
+  og.gain.setValueAtTime(0.85, now);
+  og.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+  osc.connect(og); og.connect(audioCtx.destination);
+  osc.start(now); osc.stop(now + 0.22);
+
+  // 3. Wet squirt / splash hiss
+  const wLen = Math.floor(audioCtx.sampleRate * 0.38);
+  const wBuf = audioCtx.createBuffer(1, wLen, audioCtx.sampleRate);
+  const wDat = wBuf.getChannelData(0);
+  for (let i = 0; i < wLen; i++) {
+    wDat[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / wLen, 0.8) * 0.55;
+  }
+  const wSrc = audioCtx.createBufferSource();
+  wSrc.buffer = wBuf;
+  const bp = audioCtx.createBiquadFilter();
+  bp.type = 'bandpass'; bp.frequency.value = 1100; bp.Q.value = 0.8;
+  const wg = audioCtx.createGain();
+  wg.gain.setValueAtTime(0.75, now + 0.04);
+  wg.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+  wSrc.connect(bp); bp.connect(wg); wg.connect(audioCtx.destination);
+  wSrc.start(now + 0.04);
+}
 
   const tex = new THREE.CanvasTexture(c);
   tex.wrapS = THREE.RepeatWrapping;
@@ -2853,6 +2905,57 @@ class Enemy {
     if (this.hp <= 0) this._die();
   }
 
+  explodeHead(shotDir, hitPoint) {
+    if (this.headDestroyed) return;
+    this.headDestroyed = true;
+
+    // 1. Hide the intact head mesh and its facial features
+    if (this.head) {
+      this.head.visible = false;
+    }
+
+    // 2. Add bloody severed neck stump with meat & vertebrae bone to the body group
+    const stumpMat = new THREE.MeshLambertMaterial({ color: 0x5a0000 });
+    const boneMat = new THREE.MeshLambertMaterial({ color: 0xd8d0c0 });
+    const stump = new THREE.Group();
+    
+    // Torn flesh ring
+    const meat = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 0.12, 8), stumpMat);
+    meat.position.y = 1.40;
+    stump.add(meat);
+
+    // Severed vertebrae bone in the center
+    const bone = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.14, 6), boneMat);
+    bone.position.y = 1.42;
+    stump.add(bone);
+
+    this.group.add(stump);
+    this.neckStump = stump;
+
+    // 3. Play wet meaty gore splatter explosion SFX
+    playGoreHeadPopSound();
+
+    // 4. Head position in 3D world space
+    const headWorldPos = new THREE.Vector3();
+    this.head.getWorldPosition(headWorldPos);
+    if (headWorldPos.lengthSq() < 0.1) {
+      headWorldPos.copy(this.group.position);
+      headWorldPos.y += 1.6;
+    }
+
+    // 5. Spawn flying skull/flesh/brain gibs (blow into pieces)
+    spawnGoreGibs(headWorldPos, shotDir || new THREE.Vector3(0, 0, -1));
+
+    // 6. Spawn massive high-pressure blood fountain & mist
+    spawnBloodFountain(headWorldPos, shotDir || new THREE.Vector3(0, 0, -1));
+
+    // 7. Extra ragdoll force: headless body snaps back hard
+    if (this.ragdoll) {
+      this.ragdoll.groupVelX *= 2.0;
+      this.ragdoll.groupVelZ *= 2.0;
+    }
+  }
+
   _die() {
     this.alive = false;
     playDeathSound();
@@ -3262,12 +3365,20 @@ function playerShoot() {
 
       // Damage calculation
       let dmg = w.damage;
+      const isCloseShotgun = isShotgun && targetDist < 6.5;
+
       if (isHeadshot && w.id === 'deagle') {
         dmg = 9999;
+      } else if (isHeadshot && isCloseShotgun) {
+        dmg = 9999; // Instakill close-range shotgun decapitation
       } else {
         dmg += Math.floor(Math.random() * (isShotgun ? 5 : 18)) + (isHeadshot ? (isShotgun ? 10 : 20) : 0);
       }
 
+      // Close-range shotgun headshot decapitation & gore explosion
+      if (isHeadshot && isCloseShotgun && hitEnemy.alive && !hitEnemy.headDestroyed) {
+        hitEnemy.explodeHead(shotDir, enemyHitPoint);
+      }
       hitEnemy.takeDamage(dmg);
       showHitMarker();
       playHitSound();
@@ -4109,7 +4220,7 @@ function updatePlayer(dt) {
                 if (!shotgunPumpSound1) {
                   playMagEject();
                   shotgunPumpSound1 = true;
-                  spawnEjectedShell(gunGroup);
+                  spawnEjectedShell(gunGroup, 'shotgun');
                 }
                 pumpZ = ((prog - 0.2) / 0.3) * 0.15;
               } else if (prog > 0.5 && prog <= 0.8) {
@@ -4230,6 +4341,19 @@ function startGame() {
   impactSmokes.length = 0;
   bulletHoles.forEach(h => scene.remove(h.mesh));
   bulletHoles.length = 0;
+  goreGibs.forEach(g => scene.remove(g.mesh));
+  goreGibs.length = 0;
+  bloodFountainParticles.forEach(b => scene.remove(b.mesh));
+  bloodFountainParticles.length = 0;
+  bloodPuddles.forEach(p => scene.remove(p.mesh));
+  bloodPuddles.length = 0;
+  ejectedShells.forEach(s => {
+    if (weaponScene) {
+      weaponScene.remove(s.mesh);
+      if (s.smoke) weaponScene.remove(s.smoke);
+    }
+  });
+  ejectedShells.length = 0;
   // Remove level-owned lights (directional/ambient are re-added per createLevel call)
   // Reset collidables to only the boundary entries; safest is to clear all static entries
   collidables.length = 0;
@@ -4446,6 +4570,196 @@ const playerBullets = [];
 const bulletSparks = [];
 const impactSmokes = [];
 const bulletHoles = [];
+const goreGibs = [];
+const bloodFountainParticles = [];
+const bloodPuddles = [];
+
+/** Spawn flying skull, bone and brain gibs when head explodes */
+function spawnGoreGibs(origin, shotDir) {
+  const boneMat = new THREE.MeshLambertMaterial({ color: 0xe0d6c4 });
+  const fleshMat = new THREE.MeshLambertMaterial({ color: 0x6e0808 });
+  const darkMeatMat = new THREE.MeshLambertMaterial({ color: 0x420000 });
+
+  const numGibs = 9 + Math.floor(Math.random() * 4);
+  for (let i = 0; i < numGibs; i++) {
+    const isBone = i % 3 === 0;
+    const mat = isBone ? boneMat : (i % 2 === 0 ? fleshMat : darkMeatMat);
+    const sx = 0.08 + Math.random() * 0.12;
+    const sy = 0.08 + Math.random() * 0.12;
+    const sz = 0.08 + Math.random() * 0.12;
+    const gib = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), mat);
+
+    gib.position.copy(origin).add(new THREE.Vector3(
+      (Math.random() - 0.5) * 0.25,
+      (Math.random() - 0.5) * 0.25,
+      (Math.random() - 0.5) * 0.25
+    ));
+
+    scene.add(gib);
+
+    // Violent explosive scatter along shotgun blast + upward burst
+    const vel = shotDir.clone().multiplyScalar(4.0 + Math.random() * 6.0).add(new THREE.Vector3(
+      (Math.random() - 0.5) * 4.5,
+      3.0 + Math.random() * 4.0,
+      (Math.random() - 0.5) * 4.5
+    ));
+
+    const rotVel = new THREE.Vector3(
+      (Math.random() - 0.5) * 18,
+      (Math.random() - 0.5) * 18,
+      (Math.random() - 0.5) * 18
+    );
+
+    goreGibs.push({
+      mesh: gib,
+      vel: vel,
+      rotVel: rotVel,
+      gravity: -16.0,
+      life: 8.0,
+      onGround: false
+    });
+  }
+}
+
+function updateGoreGibs(dt) {
+  for (let i = goreGibs.length - 1; i >= 0; i--) {
+    const g = goreGibs[i];
+    if (!g.onGround) {
+      g.vel.y += g.gravity * dt;
+      g.mesh.position.addScaledVector(g.vel, dt);
+      g.mesh.rotation.x += g.rotVel.x * dt;
+      g.mesh.rotation.y += g.rotVel.y * dt;
+      g.mesh.rotation.z += g.rotVel.z * dt;
+
+      // Hit floor
+      if (g.mesh.position.y <= 0.06) {
+        g.mesh.position.y = 0.06;
+        g.onGround = true;
+        g.vel.set(0, 0, 0);
+        g.rotVel.set(0, 0, 0);
+        spawnBloodPuddle(g.mesh.position.x, g.mesh.position.z, 0.2 + Math.random() * 0.25);
+      }
+    }
+    g.life -= dt;
+    if (g.life < 2.0 && g.mesh.material) {
+      g.mesh.material.opacity = Math.max(0, g.life / 2.0);
+      g.mesh.material.transparent = true;
+    }
+    if (g.life <= 0) {
+      scene.remove(g.mesh);
+      goreGibs.splice(i, 1);
+    }
+  }
+}
+
+/** Spawn massive blood fountain & droplet spray */
+function spawnBloodFountain(origin, shotDir) {
+  const bloodColors = [0x8a0303, 0xaa0000, 0x5e0000, 0xb80c0c];
+
+  const numDrops = 60 + Math.floor(Math.random() * 20);
+  for (let i = 0; i < numDrops; i++) {
+    const color = bloodColors[Math.floor(Math.random() * bloodColors.length)];
+    const size = 0.035 + Math.random() * 0.045;
+    const drop = new THREE.Mesh(
+      new THREE.BoxGeometry(size, size, size),
+      new THREE.MeshBasicMaterial({ color: color })
+    );
+
+    drop.position.copy(origin).add(new THREE.Vector3(
+      (Math.random() - 0.5) * 0.2,
+      (Math.random() - 0.5) * 0.2,
+      (Math.random() - 0.5) * 0.2
+    ));
+
+    scene.add(drop);
+
+    // Mix of upward fountain jet (from neck stump) + forward shotgun blast cone
+    let vel;
+    if (i < 30) {
+      // High-pressure upward fountain erupting from neck
+      vel = new THREE.Vector3(
+        (Math.random() - 0.5) * 3.5,
+        4.5 + Math.random() * 5.5,
+        (Math.random() - 0.5) * 3.5
+      );
+    } else {
+      // Directional blood spray blasted backward by shotgun pellets
+      vel = shotDir.clone().multiplyScalar(5.5 + Math.random() * 7.5).add(new THREE.Vector3(
+        (Math.random() - 0.5) * 4.0,
+        1.5 + Math.random() * 4.0,
+        (Math.random() - 0.5) * 4.0
+      ));
+    }
+
+    bloodFountainParticles.push({
+      mesh: drop,
+      vel: vel,
+      gravity: -14.5,
+      life: 0.8 + Math.random() * 0.7,
+      maxLife: 1.5,
+      size: size
+    });
+  }
+}
+
+function updateBloodFountain(dt) {
+  for (let i = bloodFountainParticles.length - 1; i >= 0; i--) {
+    const p = bloodFountainParticles[i];
+    p.vel.y += p.gravity * dt;
+    p.mesh.position.addScaledVector(p.vel, dt);
+    p.life -= dt;
+
+    // Floor impact creates blood splatters
+    if (p.mesh.position.y <= 0.03) {
+      spawnBloodPuddle(p.mesh.position.x, p.mesh.position.z, 0.12 + Math.random() * 0.18);
+      scene.remove(p.mesh);
+      bloodFountainParticles.splice(i, 1);
+      continue;
+    }
+
+    if (p.life <= 0) {
+      scene.remove(p.mesh);
+      bloodFountainParticles.splice(i, 1);
+    }
+  }
+}
+
+/** Spawn blood puddle decal on floor */
+function spawnBloodPuddle(x, z, radius = 0.2) {
+  if (bloodPuddles.length > 80) {
+    const old = bloodPuddles.shift();
+    scene.remove(old.mesh);
+  }
+
+  const pGeo = new THREE.PlaneGeometry(radius * 2, radius * 2);
+  const pMat = new THREE.MeshBasicMaterial({
+    color: Math.random() > 0.4 ? 0x5a0000 : 0x400000,
+    transparent: true,
+    opacity: 0.88,
+    depthWrite: false
+  });
+  const puddle = new THREE.Mesh(pGeo, pMat);
+  puddle.position.set(x, 0.015, z);
+  puddle.rotation.x = -Math.PI / 2;
+  puddle.rotation.z = Math.random() * Math.PI * 2;
+
+  scene.add(puddle);
+  bloodPuddles.push({ mesh: puddle, life: 16.0 });
+}
+
+function updateBloodPuddles(dt) {
+  for (let i = bloodPuddles.length - 1; i >= 0; i--) {
+    const p = bloodPuddles[i];
+    p.life -= dt;
+    if (p.life < 3.0 && p.mesh.material) {
+      p.mesh.material.opacity = Math.max(0, (p.life / 3.0) * 0.88);
+    }
+    if (p.life <= 0) {
+      scene.remove(p.mesh);
+      bloodPuddles.splice(i, 1);
+    }
+  }
+}
 
 /** Compute the world position of the player's weapon muzzle */
 function getPlayerMuzzleWorldPos() {
@@ -4489,118 +4803,462 @@ function getBoxHitNormal(box, pt) {
   return normal;
 }
 
+// ─── REALISTIC WEAPON CASING & SHELL MATERIALS CACHE ───
+const SHELL_MATS = {
+  brass: new THREE.MeshStandardMaterial({
+    color: 0xdfa028,
+    metalness: 0.94,
+    roughness: 0.20,
+  }),
+  brassMirror: new THREE.MeshStandardMaterial({
+    color: 0xe8b835,
+    metalness: 0.96,
+    roughness: 0.15,
+  }),
+  darkBrass: new THREE.MeshStandardMaterial({
+    color: 0xb87d20,
+    metalness: 0.88,
+    roughness: 0.32,
+  }),
+  heatAnnealed: new THREE.MeshStandardMaterial({
+    color: 0xa87028,
+    metalness: 0.82,
+    roughness: 0.40,
+  }),
+  scorchedNeck: new THREE.MeshStandardMaterial({
+    color: 0x4a3a22,
+    metalness: 0.70,
+    roughness: 0.58,
+  }),
+  primerNickel: new THREE.MeshStandardMaterial({
+    color: 0xcccccc,
+    metalness: 0.92,
+    roughness: 0.25,
+  }),
+  primerDimple: new THREE.MeshBasicMaterial({
+    color: 0x1a1a1a,
+  }),
+  shotgunHullRed: new THREE.MeshStandardMaterial({
+    color: 0x9e1a1a,
+    metalness: 0.08,
+    roughness: 0.38,
+  }),
+  shotgunHullRib: new THREE.MeshStandardMaterial({
+    color: 0x821313,
+    metalness: 0.06,
+    roughness: 0.45,
+  }),
+  shotgunInnerWad: new THREE.MeshBasicMaterial({
+    color: 0x14100c,
+  }),
+  hollowMouth: new THREE.MeshBasicMaterial({
+    color: 0x0a0a0a,
+  }),
+  smoke: new THREE.MeshBasicMaterial({
+    color: 0xcccccc,
+    transparent: true,
+    opacity: 0.35,
+    depthWrite: false,
+    side: THREE.DoubleSide
+  })
+};
+
+/** Build realistic 12-Gauge Shotgun Shell (High-Brass, Ribbed Plastic Hull, Star Crimp & Inner Wad) */
+function buildShotgunShellMesh() {
+  const g = new THREE.Group();
+
+  // 1. High-Brass Head / Base
+  const brassHead = new THREE.Mesh(new THREE.CylinderGeometry(0.0104, 0.0104, 0.014, 12), SHELL_MATS.brass);
+  brassHead.rotation.x = Math.PI / 2;
+  brassHead.position.z = 0.018;
+  g.add(brassHead);
+
+  // 2. Extractor Rim Flange at bottom of brass head
+  const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.0116, 0.0116, 0.0032, 12), SHELL_MATS.brass);
+  rim.rotation.x = Math.PI / 2;
+  rim.position.z = 0.024;
+  g.add(rim);
+
+  // 3. Extractor Groove (relief band just ahead of rim)
+  const groove = new THREE.Mesh(new THREE.CylinderGeometry(0.0098, 0.0098, 0.002, 12), SHELL_MATS.darkBrass);
+  groove.rotation.x = Math.PI / 2;
+  groove.position.z = 0.0215;
+  g.add(groove);
+
+  // 4. Centered Primer Cap & Firing Pin Strike Mark
+  const primer = new THREE.Mesh(new THREE.CylinderGeometry(0.0038, 0.0038, 0.001, 8), SHELL_MATS.primerNickel);
+  primer.rotation.x = Math.PI / 2;
+  primer.position.z = 0.0256;
+  g.add(primer);
+
+  const dimple = new THREE.Mesh(new THREE.CylinderGeometry(0.0014, 0.0014, 0.0015, 6), SHELL_MATS.primerDimple);
+  dimple.rotation.x = Math.PI / 2;
+  dimple.position.z = 0.0258;
+  g.add(dimple);
+
+  // 5. Ribbed Plastic Hull Tube (Crimson Red)
+  const plasticBody = new THREE.Mesh(new THREE.CylinderGeometry(0.0102, 0.0102, 0.036, 12), SHELL_MATS.shotgunHullRed);
+  plasticBody.rotation.x = Math.PI / 2;
+  plasticBody.position.z = -0.007;
+  g.add(plasticBody);
+
+  // 6. Hull Ribbing bands (tactile grooves characteristic of 12g shells)
+  [-0.018, -0.012, -0.006, 0.000, 0.006].forEach(zPos => {
+    const rib = new THREE.Mesh(new THREE.CylinderGeometry(0.0105, 0.0105, 0.0018, 12), SHELL_MATS.shotgunHullRib);
+    rib.rotation.x = Math.PI / 2;
+    rib.position.z = zPos;
+    g.add(rib);
+  });
+
+  // 7. Spent Star Crimp / Flared Mouth Lip
+  const mouthLip = new THREE.Mesh(new THREE.CylinderGeometry(0.0106, 0.0100, 0.004, 12), SHELL_MATS.shotgunHullRib);
+  mouthLip.rotation.x = Math.PI / 2;
+  mouthLip.position.z = -0.026;
+  g.add(mouthLip);
+
+  // 8. Dark Interior / Spent Plastic Wad Cup inside mouth
+  const innerWad = new THREE.Mesh(new THREE.CylinderGeometry(0.0086, 0.0086, 0.002, 10), SHELL_MATS.shotgunInnerWad);
+  innerWad.rotation.x = Math.PI / 2;
+  innerWad.position.z = -0.0265;
+  g.add(innerWad);
+
+  return g;
+}
+
+/** Build 5.56x45mm NATO Assault Rifle Brass Casing */
+function buildRifleShellMesh() {
+  const g = new THREE.Group();
+
+  // Tapered Casing Body
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.0056, 0.0063, 0.026, 10), SHELL_MATS.brass);
+  body.rotation.x = Math.PI / 2;
+  body.position.z = -0.005;
+  g.add(body);
+
+  // Bottleneck Shoulder Cone
+  const shoulder = new THREE.Mesh(new THREE.CylinderGeometry(0.0042, 0.0056, 0.006, 10), SHELL_MATS.brass);
+  shoulder.rotation.x = Math.PI / 2;
+  shoulder.position.z = -0.0205;
+  g.add(shoulder);
+
+  // Neck Tube with Heat-Annealed Finish
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.0042, 0.0042, 0.007, 10), SHELL_MATS.heatAnnealed);
+  neck.rotation.x = Math.PI / 2;
+  neck.position.z = -0.0265;
+  g.add(neck);
+
+  // Hollow Open Mouth
+  const mouth = new THREE.Mesh(new THREE.CylinderGeometry(0.0032, 0.0032, 0.001, 8), SHELL_MATS.hollowMouth);
+  mouth.rotation.x = Math.PI / 2;
+  mouth.position.z = -0.030;
+  g.add(mouth);
+
+  // Extractor Groove
+  const groove = new THREE.Mesh(new THREE.CylinderGeometry(0.0052, 0.0052, 0.0025, 10), SHELL_MATS.darkBrass);
+  groove.rotation.x = Math.PI / 2;
+  groove.position.z = 0.009;
+  g.add(groove);
+
+  // Extractor Rim Flange
+  const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.0066, 0.0066, 0.003, 10), SHELL_MATS.brass);
+  rim.rotation.x = Math.PI / 2;
+  rim.position.z = 0.0115;
+  g.add(rim);
+
+  // Primer Cap & Strike Mark
+  const primer = new THREE.Mesh(new THREE.CylinderGeometry(0.0024, 0.0024, 0.0008, 8), SHELL_MATS.primerNickel);
+  primer.rotation.x = Math.PI / 2;
+  primer.position.z = 0.0131;
+  g.add(primer);
+
+  const dimple = new THREE.Mesh(new THREE.CylinderGeometry(0.0009, 0.0009, 0.001, 6), SHELL_MATS.primerDimple);
+  dimple.rotation.x = Math.PI / 2;
+  dimple.position.z = 0.0133;
+  g.add(dimple);
+
+  return g;
+}
+
+/** Build .338 Lapua Magnum Heavy Sniper Casing */
+function buildSniperShellMesh() {
+  const g = new THREE.Group();
+
+  // Heavy Tapered Body
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.0076, 0.0086, 0.038, 12), SHELL_MATS.brass);
+  body.rotation.x = Math.PI / 2;
+  body.position.z = -0.007;
+  g.add(body);
+
+  // Sharp Shoulder Cone
+  const shoulder = new THREE.Mesh(new THREE.CylinderGeometry(0.0052, 0.0076, 0.0075, 12), SHELL_MATS.brass);
+  shoulder.rotation.x = Math.PI / 2;
+  shoulder.position.z = -0.029;
+  g.add(shoulder);
+
+  // Extended Neck with Scorched Powder Tip
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.0052, 0.0052, 0.009, 12), SHELL_MATS.scorchedNeck);
+  neck.rotation.x = Math.PI / 2;
+  neck.position.z = -0.0368;
+  g.add(neck);
+
+  // Hollow Mouth
+  const mouth = new THREE.Mesh(new THREE.CylinderGeometry(0.0042, 0.0042, 0.001, 8), SHELL_MATS.hollowMouth);
+  mouth.rotation.x = Math.PI / 2;
+  mouth.position.z = -0.0414;
+  g.add(mouth);
+
+  // Deep Extractor Cannelure Groove
+  const groove = new THREE.Mesh(new THREE.CylinderGeometry(0.0070, 0.0070, 0.003, 12), SHELL_MATS.darkBrass);
+  groove.rotation.x = Math.PI / 2;
+  groove.position.z = 0.0132;
+  g.add(groove);
+
+  // Heavy Rim Base
+  const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.0088, 0.0088, 0.0038, 12), SHELL_MATS.brass);
+  rim.rotation.x = Math.PI / 2;
+  rim.position.z = 0.0165;
+  g.add(rim);
+
+  // Large Magnum Primer
+  const primer = new THREE.Mesh(new THREE.CylinderGeometry(0.0034, 0.0034, 0.001, 8), SHELL_MATS.primerNickel);
+  primer.rotation.x = Math.PI / 2;
+  primer.position.z = 0.0185;
+  g.add(primer);
+
+  const dimple = new THREE.Mesh(new THREE.CylinderGeometry(0.0012, 0.0012, 0.0012, 6), SHELL_MATS.primerDimple);
+  dimple.rotation.x = Math.PI / 2;
+  dimple.position.z = 0.0187;
+  g.add(dimple);
+
+  return g;
+}
+
+/** Build .50 Action Express Magnum Casing (Desert Eagle) */
+function buildDeagleShellMesh() {
+  const g = new THREE.Group();
+
+  // Chunky Straight-Wall Body (Mirror Polished Brass)
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.0085, 0.0088, 0.026, 12), SHELL_MATS.brassMirror);
+  body.rotation.x = Math.PI / 2;
+  body.position.z = -0.002;
+  g.add(body);
+
+  // Chamfered Open Mouth
+  const mouth = new THREE.Mesh(new THREE.CylinderGeometry(0.0072, 0.0072, 0.001, 10), SHELL_MATS.hollowMouth);
+  mouth.rotation.x = Math.PI / 2;
+  mouth.position.z = -0.0152;
+  g.add(mouth);
+
+  // Undercut Extractor Groove
+  const groove = new THREE.Mesh(new THREE.CylinderGeometry(0.0068, 0.0068, 0.0026, 12), SHELL_MATS.darkBrass);
+  groove.rotation.x = Math.PI / 2;
+  groove.position.z = 0.012;
+  g.add(groove);
+
+  // Signature .50 AE Rebated Rim (narrower than body diameter)
+  const rebatedRim = new THREE.Mesh(new THREE.CylinderGeometry(0.0078, 0.0078, 0.003, 12), SHELL_MATS.brassMirror);
+  rebatedRim.rotation.x = Math.PI / 2;
+  rebatedRim.position.z = 0.0146;
+  g.add(rebatedRim);
+
+  // Large Magnum Primer
+  const primer = new THREE.Mesh(new THREE.CylinderGeometry(0.0032, 0.0032, 0.001, 8), SHELL_MATS.primerNickel);
+  primer.rotation.x = Math.PI / 2;
+  primer.position.z = 0.0162;
+  g.add(primer);
+
+  const dimple = new THREE.Mesh(new THREE.CylinderGeometry(0.0012, 0.0012, 0.0012, 6), SHELL_MATS.primerDimple);
+  dimple.rotation.x = Math.PI / 2;
+  dimple.position.z = 0.0164;
+  g.add(dimple);
+
+  return g;
+}
+
+/** Build 9x19mm Parabellum Standard Pistol Casing */
+function buildPistolShellMesh() {
+  const g = new THREE.Group();
+
+  // Compact 9mm Tapered Body
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.0048, 0.0052, 0.018, 10), SHELL_MATS.brass);
+  body.rotation.x = Math.PI / 2;
+  body.position.z = -0.002;
+  g.add(body);
+
+  // Hollow Mouth
+  const mouth = new THREE.Mesh(new THREE.CylinderGeometry(0.0038, 0.0038, 0.001, 8), SHELL_MATS.hollowMouth);
+  mouth.rotation.x = Math.PI / 2;
+  mouth.position.z = -0.0112;
+  g.add(mouth);
+
+  // Extractor Groove
+  const groove = new THREE.Mesh(new THREE.CylinderGeometry(0.0043, 0.0043, 0.002, 10), SHELL_MATS.darkBrass);
+  groove.rotation.x = Math.PI / 2;
+  groove.position.z = 0.0078;
+  g.add(groove);
+
+  // Base Rim
+  const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.0055, 0.0055, 0.0022, 10), SHELL_MATS.brass);
+  rim.rotation.x = Math.PI / 2;
+  rim.position.z = 0.0098;
+  g.add(rim);
+
+  // Boxer Primer
+  const primer = new THREE.Mesh(new THREE.CylinderGeometry(0.0021, 0.0021, 0.0008, 8), SHELL_MATS.primerNickel);
+  primer.rotation.x = Math.PI / 2;
+  primer.position.z = 0.0110;
+  g.add(primer);
+
+  const dimple = new THREE.Mesh(new THREE.CylinderGeometry(0.0008, 0.0008, 0.001, 6), SHELL_MATS.primerDimple);
+  dimple.rotation.x = Math.PI / 2;
+  dimple.position.z = 0.0112;
+  g.add(dimple);
+
+  return g;
+}
+
+/** Build 9mm Submachine Gun Casing (UZI) */
+function buildUziShellMesh() {
+  const g = new THREE.Group();
+
+  // Compact Heat-Worn 9mm Body
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.0047, 0.0051, 0.017, 10), SHELL_MATS.darkBrass);
+  body.rotation.x = Math.PI / 2;
+  body.position.z = -0.002;
+  g.add(body);
+
+  // Scorched Mouth Rim
+  const mouth = new THREE.Mesh(new THREE.CylinderGeometry(0.0037, 0.0037, 0.001, 8), SHELL_MATS.scorchedNeck);
+  mouth.rotation.x = Math.PI / 2;
+  mouth.position.z = -0.0108;
+  g.add(mouth);
+
+  // Extractor Groove
+  const groove = new THREE.Mesh(new THREE.CylinderGeometry(0.0042, 0.0042, 0.002, 10), SHELL_MATS.scorchedNeck);
+  groove.rotation.x = Math.PI / 2;
+  groove.position.z = 0.0074;
+  g.add(groove);
+
+  // Base Rim
+  const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.0054, 0.0054, 0.0022, 10), SHELL_MATS.darkBrass);
+  rim.rotation.x = Math.PI / 2;
+  rim.position.z = 0.0093;
+  g.add(rim);
+
+  // Primer
+  const primer = new THREE.Mesh(new THREE.CylinderGeometry(0.0020, 0.0020, 0.0008, 8), SHELL_MATS.primerNickel);
+  primer.rotation.x = Math.PI / 2;
+  primer.position.z = 0.0105;
+  g.add(primer);
+
+  const dimple = new THREE.Mesh(new THREE.CylinderGeometry(0.0008, 0.0008, 0.001, 6), SHELL_MATS.primerDimple);
+  dimple.rotation.x = Math.PI / 2;
+  dimple.position.z = 0.0107;
+  g.add(dimple);
+
+  return g;
+}
+
 /** Eject realistic spent brass shell casing matching real firearm caliber mechanics */
 function spawnEjectedShell(wGroup, weaponId = 'shotgun') {
   if (!wGroup) return;
 
   const shellGroup = new THREE.Group();
   let vel, rotVel, life = 1.6;
+  let offset = new THREE.Vector3(0.05, 0.02, -0.08);
 
-  if (weaponId === 'rifle') {
-    // 5.56x45mm NATO assault rifle brass casing
-    const brassMat = new THREE.MeshStandardMaterial({
-      color: 0xdfa028,
-      metalness: 0.92,
-      roughness: 0.22,
-    });
-    const primerMat = new THREE.MeshStandardMaterial({
-      color: 0xb87d20,
-      metalness: 0.85,
-      roughness: 0.35
-    });
+  if (weaponId === 'shotgun') {
+    shellGroup.add(buildShotgunShellMesh());
+    offset.set(0.048, 0.025, -0.08);
+    life = 2.0;
 
-    // Casing body (tapered cartridge)
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.0058, 0.0064, 0.034, 10), brassMat);
-    body.rotation.x = Math.PI / 2;
-    body.position.z = -0.008;
-    shellGroup.add(body);
-
-    // Bottleneck shoulder
-    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.0042, 0.0058, 0.008, 10), brassMat);
-    neck.rotation.x = Math.PI / 2;
-    neck.position.z = -0.028;
-    shellGroup.add(neck);
-
-    // Extractor rim at base
-    const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.0068, 0.0068, 0.004, 10), primerMat);
-    rim.rotation.x = Math.PI / 2;
-    rim.position.z = 0.011;
-    shellGroup.add(rim);
-
-    // Ejection port position on assault rifle (right side receiver)
-    const offset = new THREE.Vector3(0.065, 0.03, -0.12);
-    offset.applyEuler(wGroup.rotation);
-    shellGroup.position.copy(wGroup.position).add(offset);
-    shellGroup.rotation.copy(wGroup.rotation);
-
-    // High velocity ejection: flips vigorously to the right (+X), up (+Y), and slightly back (+Z)
+    // Satisfying pump-action ejection arc: flips outward to the right, slightly up and back
     vel = new THREE.Vector3(
-      2.0 + Math.random() * 0.7,
-      1.1 + Math.random() * 0.5,
-      0.5 + Math.random() * 0.4
+      1.5 + Math.random() * 0.4,
+      1.1 + Math.random() * 0.3,
+      0.35 + Math.random() * 0.3
     );
-
     rotVel = new THREE.Vector3(
-      (Math.random() - 0.5) * 28,
-      (Math.random() - 0.5) * 24,
+      (Math.random() - 0.5) * 16,
+      (Math.random() - 0.5) * 14,
+      8.0 + Math.random() * 6.0
+    );
+  } else if (weaponId === 'rifle') {
+    shellGroup.add(buildRifleShellMesh());
+    offset.set(0.065, 0.03, -0.12);
+    life = 1.7;
+
+    // High velocity gas-operated extraction: flips vigorously to the right (+X), up (+Y), and back (+Z)
+    vel = new THREE.Vector3(
+      2.3 + Math.random() * 0.6,
+      1.3 + Math.random() * 0.4,
+      0.55 + Math.random() * 0.35
+    );
+    rotVel = new THREE.Vector3(
+      (Math.random() - 0.5) * 32,
+      (Math.random() - 0.5) * 26,
+      (Math.random() - 0.5) * 32
+    );
+  } else if (weaponId === 'sniper') {
+    shellGroup.add(buildSniperShellMesh());
+    offset.set(0.055, 0.04, -0.05);
+    life = 2.2;
+
+    // Heavy magnum kick: powerful high arcing trajectory with weighty tumbling
+    vel = new THREE.Vector3(
+      1.9 + Math.random() * 0.5,
+      1.5 + Math.random() * 0.4,
+      0.6 + Math.random() * 0.3
+    );
+    rotVel = new THREE.Vector3(
+      (Math.random() - 0.5) * 20,
+      (Math.random() - 0.5) * 18,
+      (Math.random() - 0.5) * 22
+    );
+  } else if (weaponId === 'deagle') {
+    shellGroup.add(buildDeagleShellMesh());
+    offset.set(0.052, 0.035, -0.055);
+    life = 1.8;
+
+    // Punchy magnum slide kick: high upward toss and rapid spin
+    vel = new THREE.Vector3(
+      2.0 + Math.random() * 0.5,
+      1.3 + Math.random() * 0.4,
+      0.5 + Math.random() * 0.3
+    );
+    rotVel = new THREE.Vector3(
+      (Math.random() - 0.5) * 26,
+      (Math.random() - 0.5) * 22,
       (Math.random() - 0.5) * 28
     );
-  } else if (weaponId === 'shotgun') {
-    // 12-gauge shotgun shell
-    const brass = new THREE.MeshLambertMaterial({ color: 0xcc8800 });
-    const plastic = new THREE.MeshLambertMaterial({ color: 0xaa2211 });
+  } else if (weaponId === 'uzi') {
+    shellGroup.add(buildUziShellMesh());
+    offset.set(0.048, 0.045, -0.04);
+    life = 1.5;
 
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.035, 8), plastic);
-    body.rotation.x = Math.PI / 2;
-    body.position.z = -0.01;
-    shellGroup.add(body);
-
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.0092, 0.0092, 0.015, 8), brass);
-    base.rotation.x = Math.PI / 2;
-    base.position.z = 0.015;
-    shellGroup.add(base);
-
-    const offset = new THREE.Vector3(0.05, 0.02, -0.10);
-    offset.applyEuler(wGroup.rotation);
-    shellGroup.position.copy(wGroup.position).add(offset);
-    shellGroup.rotation.copy(wGroup.rotation);
-
+    // Rapid SMG scatter: fast erratic scatter ejection
     vel = new THREE.Vector3(
-      1.3 + Math.random() * 0.5,
-      0.8 + Math.random() * 0.4,
-      0.3 + Math.random() * 0.3
+      2.5 + Math.random() * 0.7,
+      1.4 + Math.random() * 0.5,
+      0.6 + Math.random() * 0.4
     );
-
     rotVel = new THREE.Vector3(
-      Math.random() * 10 - 5,
-      Math.random() * 10 - 5,
-      Math.random() * 10 - 5
+      (Math.random() - 0.5) * 36,
+      (Math.random() - 0.5) * 30,
+      (Math.random() - 0.5) * 36
     );
   } else {
-    // Pistol / Uzi / Deagle / Sniper brass
-    const brassMat = new THREE.MeshStandardMaterial({
-      color: 0xdfa028,
-      metalness: 0.9,
-      roughness: 0.22,
-    });
-    const rad = (weaponId === 'deagle' || weaponId === 'sniper') ? 0.007 : 0.005;
-    const len = (weaponId === 'sniper') ? 0.042 : (weaponId === 'deagle' ? 0.028 : 0.02);
+    // pistol (standard 9mm)
+    shellGroup.add(buildPistolShellMesh());
+    offset.set(0.042, 0.035, -0.05);
+    life = 1.6;
 
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(rad, rad, len, 8), brassMat);
-    body.rotation.x = Math.PI / 2;
-    shellGroup.add(body);
-
-    const offset = new THREE.Vector3(0.04, 0.02, -0.06);
-    offset.applyEuler(wGroup.rotation);
-    shellGroup.position.copy(wGroup.position).add(offset);
-    shellGroup.rotation.copy(wGroup.rotation);
-
+    // Clean semi-auto pistol ejection arc
     vel = new THREE.Vector3(
-      1.6 + Math.random() * 0.6,
-      0.9 + Math.random() * 0.5,
-      0.4 + Math.random() * 0.3
+      1.7 + Math.random() * 0.4,
+      1.1 + Math.random() * 0.3,
+      0.4 + Math.random() * 0.25
     );
-
     rotVel = new THREE.Vector3(
       (Math.random() - 0.5) * 24,
       (Math.random() - 0.5) * 20,
@@ -4608,8 +5266,28 @@ function spawnEjectedShell(wGroup, weaponId = 'shotgun') {
     );
   }
 
+  // Orient and place shell at the weapon's ejection port in 3D weapon space
+  offset.applyEuler(wGroup.rotation);
+  shellGroup.position.copy(wGroup.position).add(offset);
+  shellGroup.rotation.copy(wGroup.rotation);
+
+  // Faint hot gunpowder smoke wisp trailing from the spent casing
+  const smokeWisp = new THREE.Mesh(
+    new THREE.SphereGeometry(0.008, 6, 6),
+    SHELL_MATS.smoke.clone()
+  );
+  smokeWisp.position.copy(shellGroup.position);
+  weaponScene.add(smokeWisp);
+
   weaponScene.add(shellGroup);
-  ejectedShells.push({ mesh: shellGroup, vel, rotVel, life });
+  ejectedShells.push({
+    mesh: shellGroup,
+    smoke: smokeWisp,
+    vel,
+    rotVel,
+    life,
+    maxLife: life
+  });
 }
 
 function updateEjectedShells(dt) {
@@ -4619,10 +5297,23 @@ function updateEjectedShells(dt) {
     s.mesh.rotation.x += s.rotVel.x * dt;
     s.mesh.rotation.y += s.rotVel.y * dt;
     s.mesh.rotation.z += s.rotVel.z * dt;
-    s.vel.y -= 4.2 * dt; // Gravity in weaponScene space
+
+    // Atmospheric drag on tumbling casing
+    s.vel.x *= Math.max(0, 1 - dt * 0.35);
+    s.vel.z *= Math.max(0, 1 - dt * 0.35);
+    s.vel.y -= 4.6 * dt; // Gravity in weaponScene space
+
+    // Dissipating chamber smoke puff
+    if (s.smoke) {
+      s.smoke.position.y += 0.08 * dt;
+      s.smoke.scale.addScalar(dt * 1.8);
+      s.smoke.material.opacity = Math.max(0, (s.life / s.maxLife) * 0.35);
+    }
+
     s.life -= dt;
     if (s.life <= 0) {
       weaponScene.remove(s.mesh);
+      if (s.smoke) weaponScene.remove(s.smoke);
       ejectedShells.splice(i, 1);
     }
   }
@@ -4893,6 +5584,9 @@ function gameLoop() {
     updateBulletSparks(dt);
     updateImpactSmokes(dt);
     updateBulletHoles(dt);
+    updateGoreGibs(dt);
+    updateBloodFountain(dt);
+    updateBloodPuddles(dt);
     updateEjectedShells(dt);
   }
 
