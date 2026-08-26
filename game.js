@@ -1027,9 +1027,25 @@ function createBattlefieldLevel() {
   sandbagCluster(10, -22, 6, 4.5);
   sandbagCluster(-30, 8, 4, 3.0);
   sandbagCluster(28, -10, 5, 3.5);
-  // =====================================================
-  //  DESTROYED VEHICLES -- 4 distinct types (High Detail & Grouped)
-  // =====================================================
+  // Tight, multi-segment vehicle collider generator (avoids oversized empty-air AABB on rotated meshes)
+  function addTightVehicleColliders(cx, cz, rotY, segments) {
+    const cos = Math.cos(rotY);
+    const sin = Math.sin(rotY);
+    segments.forEach(seg => {
+      const lx = seg.lx || 0;
+      const lz = seg.lz || 0;
+      const wx = cx + lx * cos - lz * sin;
+      const wz = cz + lx * sin + lz * cos;
+      const wy = seg.y !== undefined ? seg.y : (seg.h / 2);
+
+      const cMesh = new THREE.Mesh(new THREE.BoxGeometry(seg.w, seg.h, seg.d), new THREE.MeshBasicMaterial());
+      cMesh.position.set(wx, wy, wz);
+      cMesh.rotation.set(0, rotY, 0);
+      cMesh.updateMatrixWorld();
+      const b3 = new THREE.Box3().setFromObject(cMesh);
+      collidables.push(b3);
+    });
+  }
 
   // JEEP
   function spawnJeep(x, z, rotY, tipped) {
@@ -1124,27 +1140,22 @@ function createBattlefieldLevel() {
     group.position.set(x, yOff, z);
     group.rotation.set(bRoll, rotY, 0);
     scene.add(group);
-
-    // Add collision (we need an invisible box that bounds the whole group)
-    const colliderMesh = new THREE.Mesh(new THREE.BoxGeometry(3.4, 1.8, 2.0), new THREE.MeshBasicMaterial());
-    colliderMesh.position.set(x, 0.9 + yOff, z);
-    colliderMesh.rotation.set(bRoll, rotY, 0);
-    colliderMesh.updateMatrixWorld();
-    const jeepBox = new THREE.Box3().setFromObject(colliderMesh);
-    collidables.push(jeepBox);
-
     levelMeshes.push(group);
 
-    // Register as destructible vehicle
-    vehicles.push({
-      group,
-      hp: 120, maxHp: 120,
-      destroyed: false,
-      colliderBox: jeepBox,
-      collidableIdx: collidables.length - 1,
-      particles: [],
-      fireTimers: []
-    });
+    // Tight multi-segment colliders (no giant ghost boxes)
+    if (tipped) {
+      addTightVehicleColliders(x, z, rotY, [
+        { lx: 1.0, w: 1.1, h: 1.6, d: 1.5, y: 0.8 },
+        { lx: -0.1, w: 1.1, h: 1.6, d: 1.5, y: 0.8 },
+        { lx: -1.1, w: 1.1, h: 1.6, d: 1.5, y: 0.8 }
+      ]);
+    } else {
+      addTightVehicleColliders(x, z, rotY, [
+        { lx: 1.0, w: 1.1, h: 1.3, d: 1.5, y: 0.65 },
+        { lx: -0.1, w: 1.1, h: 1.7, d: 1.5, y: 0.85 },
+        { lx: -1.1, w: 1.1, h: 1.2, d: 1.5, y: 0.60 }
+      ]);
+    }
   }
 
   // APC
@@ -1228,25 +1239,15 @@ function createBattlefieldLevel() {
     group.position.set(x, 0, z);
     group.rotation.set(0, rotY, 0);
     scene.add(group);
-
-    const colliderMesh = new THREE.Mesh(new THREE.BoxGeometry(5.0, 3.2, 3.0), new THREE.MeshBasicMaterial());
-    colliderMesh.position.set(x, 1.6, z);
-    colliderMesh.rotation.set(0, rotY, 0);
-    colliderMesh.updateMatrixWorld();
-    const apcBox = new THREE.Box3().setFromObject(colliderMesh);
-    collidables.push(apcBox);
     levelMeshes.push(group);
 
-    // Register as destructible vehicle
-    vehicles.push({
-      group,
-      hp: 250, maxHp: 250,
-      destroyed: false,
-      colliderBox: apcBox,
-      collidableIdx: collidables.length - 1,
-      particles: [],
-      fireTimers: []
-    });
+    // Tight multi-segment APC colliders
+    addTightVehicleColliders(x, z, rotY, [
+      { lx: 1.8, w: 1.2, h: 1.8, d: 2.5, y: 0.9 },
+      { lx: 0.6, w: 1.2, h: 2.5, d: 2.5, y: 1.25 },
+      { lx: -0.6, w: 1.2, h: 1.9, d: 2.5, y: 0.95 },
+      { lx: -1.8, w: 1.2, h: 1.9, d: 2.5, y: 0.95 }
+    ]);
   }
 
   // TRUCK
@@ -1349,25 +1350,16 @@ function createBattlefieldLevel() {
     group.position.set(x, 0, z);
     group.rotation.set(0, rotY, 0);
     scene.add(group);
-
-    const colliderMesh = new THREE.Mesh(new THREE.BoxGeometry(7.0, 3.0, 2.4), new THREE.MeshBasicMaterial());
-    colliderMesh.position.set(x, 1.5, z);
-    colliderMesh.rotation.set(0, rotY, 0);
-    colliderMesh.updateMatrixWorld();
-    const truckBox = new THREE.Box3().setFromObject(colliderMesh);
-    collidables.push(truckBox);
     levelMeshes.push(group);
 
-    // Register as destructible vehicle
-    vehicles.push({
-      group,
-      hp: 180, maxHp: 180,
-      destroyed: false,
-      colliderBox: truckBox,
-      collidableIdx: collidables.length - 1,
-      particles: [],
-      fireTimers: []
-    });
+    // Tight multi-segment Truck colliders
+    addTightVehicleColliders(x, z, rotY, [
+      { lx: 3.5, w: 1.4, h: 1.8, d: 2.1, y: 0.9 },
+      { lx: 2.1, w: 1.4, h: 2.5, d: 2.1, y: 1.25 },
+      { lx: 0.7, w: 1.4, h: 2.0, d: 2.1, y: 1.0 },
+      { lx: -0.7, w: 1.4, h: 2.0, d: 2.1, y: 1.0 },
+      { lx: -2.1, w: 1.4, h: 2.0, d: 2.1, y: 1.0 }
+    ]);
   }
 
   // TANK HULK
@@ -1449,25 +1441,16 @@ function createBattlefieldLevel() {
     group.position.set(x, 0, z);
     group.rotation.set(0, rotY, 0);
     scene.add(group);
-
-    const colliderMesh = new THREE.Mesh(new THREE.BoxGeometry(6.5, 2.5, 3.6), new THREE.MeshBasicMaterial());
-    colliderMesh.position.set(x, 1.2, z);
-    colliderMesh.rotation.set(0, rotY, 0);
-    colliderMesh.updateMatrixWorld();
-    const tankBox = new THREE.Box3().setFromObject(colliderMesh);
-    collidables.push(tankBox);
     levelMeshes.push(group);
 
-    // Register as destructible vehicle
-    vehicles.push({
-      group,
-      hp: 400, maxHp: 400,
-      destroyed: false,
-      colliderBox: tankBox,
-      collidableIdx: collidables.length - 1,
-      particles: [],
-      fireTimers: []
-    });
+    // Tight multi-segment Tank colliders
+    addTightVehicleColliders(x, z, rotY, [
+      { lx: 2.4, w: 1.3, h: 1.6, d: 3.1, y: 0.8 },
+      { lx: 1.2, w: 1.3, h: 2.4, d: 3.1, y: 1.2 },
+      { lx: 0.0, w: 1.3, h: 2.4, d: 3.1, y: 1.2 },
+      { lx: -1.2, w: 1.3, h: 1.8, d: 3.1, y: 0.9 },
+      { lx: -2.4, w: 1.3, h: 1.8, d: 3.1, y: 0.9 }
+    ]);
   }
 
   // Asymmetric vehicle placement
@@ -1481,23 +1464,58 @@ function createBattlefieldLevel() {
   spawnTankHulk(26, -20, 2.2);
 
   // =====================================================
-  //  FENCE LINES -- with collision on every post & rail
+  //  FENCE LINES -- with fixed, solid tight hitboxes
   // =====================================================
   function fenceLine(x, z, len, axis, broken) {
     const posts = Math.ceil(len / 2.8);
     for (let i = 0; i < posts; i++) {
-      if (broken && i === Math.floor(posts / 2)) continue; // gap in broken fence
+      const isGap = broken && i === Math.floor(posts / 2);
       const ox = axis === 'x' ? (i - posts / 2 + 0.5) * 2.8 : 0;
       const oz = axis === 'z' ? (i - posts / 2 + 0.5) * 2.8 : 0;
-      // Post with collision
-      box(x + ox, 0.85, z + oz, 0.12, 1.7, 0.12, metalMat);
-      // Horizontal rails (two per span) with collision
+
+      // Post (with exact tight collision)
+      if (!isGap) {
+        box(x + ox, 0.85, z + oz, 0.14, 1.7, 0.14, metalMat);
+      }
+
+      // Horizontal rails & solid tight collision across each span
       if (i < posts - 1) {
+        const spanIsGap = broken && (i === Math.floor(posts / 2) || i + 1 === Math.floor(posts / 2));
         const bLen = 2.82;
         const bx = x + ox + (axis === 'x' ? bLen / 2 : 0);
         const bz = z + oz + (axis === 'z' ? bLen / 2 : 0);
-        box(bx, 1.28, bz, axis === 'x' ? bLen : 0.1, 0.09, axis === 'z' ? bLen : 0.09, metalMat);
-        box(bx, 0.62, bz, axis === 'x' ? bLen : 0.08, 0.07, axis === 'z' ? bLen : 0.07, metalMat);
+
+        if (!spanIsGap) {
+          // Visual rails
+          const rail1 = new THREE.Mesh(new THREE.BoxGeometry(axis === 'x' ? bLen : 0.08, 0.08, axis === 'z' ? bLen : 0.08), metalMat);
+          rail1.position.set(bx, 1.30, bz);
+          scene.add(rail1); levelMeshes.push(rail1);
+
+          const rail2 = new THREE.Mesh(new THREE.BoxGeometry(axis === 'x' ? bLen : 0.08, 0.08, axis === 'z' ? bLen : 0.08), metalMat);
+          rail2.position.set(bx, 0.65, bz);
+          scene.add(rail2); levelMeshes.push(rail2);
+
+          // Chain link / wire mesh visual
+          const wireMat = new THREE.MeshLambertMaterial({ color: 0x333333, transparent: true, opacity: 0.7 });
+          const wireMesh = new THREE.Mesh(new THREE.BoxGeometry(axis === 'x' ? bLen : 0.03, 1.35, axis === 'z' ? bLen : 0.03), wireMat);
+          wireMesh.position.set(bx, 0.85, bz);
+          scene.add(wireMesh); levelMeshes.push(wireMesh);
+
+          // Single continuous, tight solid collider box (0 to 1.7m high, 0.16m thick)
+          const fBox = new THREE.Box3(
+            new THREE.Vector3(
+              bx - (axis === 'x' ? bLen / 2 : 0.08),
+              0,
+              bz - (axis === 'z' ? bLen / 2 : 0.08)
+            ),
+            new THREE.Vector3(
+              bx + (axis === 'x' ? bLen / 2 : 0.08),
+              1.7,
+              bz + (axis === 'z' ? bLen / 2 : 0.08)
+            )
+          );
+          collidables.push(fBox);
+        }
       }
     }
   }
@@ -2498,7 +2516,7 @@ class Enemy {
       if (this.collapseTimer === undefined) {
         this.collapseTimer = 0;
 
-        // Ã¢â€â‚¬Ã¢â€â‚¬ Compute fall direction: away from the player (bullet impact pushback)
+        // ─── Compute fall direction: away from the player (bullet impact pushback) ───
         const dx = this.group.position.x - camera.position.x;
         const dz = this.group.position.z - camera.position.z;
         const dist = Math.sqrt(dx * dx + dz * dz) || 1;
@@ -2512,33 +2530,33 @@ class Enemy {
         const fallZ = Math.sin(localAngle); // roll (left/right)
 
         this.ragdoll = {
-          // Ã¢â€â‚¬Ã¢â€â‚¬ Body fall targets (the whole group tips over)
+          // ─── Body fall targets (the whole group tips over) ───
           groupTargetX: fallX * (Math.PI / 2 + (Math.random() - 0.5) * 0.3),
           groupTargetZ: fallZ * (0.2 + Math.random() * 0.3),
           groupVelX: fallX * (2.0 + Math.random()),
           groupVelZ: fallZ * (0.5 + Math.random() * 0.5),
 
-          // Ã¢â€â‚¬Ã¢â€â‚¬ Head: angular velocity (starts with whiplash from impact)
+          // ─── Head: angular velocity (starts with whiplash from impact) ───
           headVelX: 1.5 + Math.random() * 2.5,
           headVelZ: (Math.random() - 0.5) * 3.0,
           headVelY: (Math.random() - 0.5) * 1.5,
 
-          // Ã¢â€â‚¬Ã¢â€â‚¬ Left arm: swings loose
+          // ─── Left arm: swings loose ───
           lArmVelX: (Math.random() - 0.5) * 4.0,
           lArmVelZ: 1.5 + Math.random() * 2.0,  // flop outward
           lArmVelY: (Math.random() - 0.5) * 2.0,
 
-          // Ã¢â€â‚¬Ã¢â€â‚¬ Right arm: swings loose
+          // ─── Right arm: swings loose ───
           rArmVelX: (Math.random() - 0.5) * 4.0,
           rArmVelZ: -1.5 - Math.random() * 2.0,  // flop outward other side
           rArmVelY: (Math.random() - 0.5) * 2.0,
 
-          // Ã¢â€â‚¬Ã¢â€â‚¬ Left leg: kicks out
+          // ─── Left leg: kicks out ───
           lLegVelX: (Math.random() - 0.5) * 2.0,
           lLegVelZ: 0.5 + Math.random() * 1.5,
           lLegVelY: (Math.random() - 0.5) * 1.0,
 
-          // Ã¢â€â‚¬Ã¢â€â‚¬ Right leg: kicks out
+          // ─── Right leg: kicks out ───
           rLegVelX: (Math.random() - 0.5) * 2.0,
           rLegVelZ: -0.5 - Math.random() * 1.5,
           rLegVelY: (Math.random() - 0.5) * 1.0,
@@ -2551,7 +2569,7 @@ class Enemy {
         this.slideX = this.group.position.x + fallDirX * (0.6 + Math.random() * 0.4);
         this.slideZ = this.group.position.z + fallDirZ * (0.6 + Math.random() * 0.4);
 
-        // Ã¢â€â‚¬Ã¢â€â‚¬ Register a rigid body hitbox for the dead body
+        // ─── Register a rigid body hitbox for the dead body ───
         this._deadBodyBox = new THREE.Box3(
           new THREE.Vector3(
             this.group.position.x - 0.5,
@@ -2570,15 +2588,15 @@ class Enemy {
       this.collapseTimer += dt;
       const r = this.ragdoll;
 
-      // Ã¢â€â‚¬Ã¢â€â‚¬ Physics constants
+      // ─── Physics constants ───
       const GRAVITY_TORQUE = 6.0;   // gravity pulling limbs down
       const DAMPING = 3.2;   // angular velocity damping
       const GROUND_BOUNCE = 0.3;   // bounciness when hitting joint limits
 
       if (!r.settled) {
-        // Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
+        // ──────────────────────────────────────────────
         //  BODY FALL (the whole group tips over)
-        // Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
+        // ──────────────────────────────────────────────
 
         // Apply angular velocity with gravity assist
         r.groupVelX += (r.groupTargetX > 0 ? GRAVITY_TORQUE : -GRAVITY_TORQUE) * 0.5 * dt;
@@ -2588,7 +2606,7 @@ class Enemy {
         r.groupVelZ *= (1 - DAMPING * dt);
         this.group.rotation.z += r.groupVelZ * dt;
 
-        // Clamp body rotation (it's lying on ground, can't go past ~90Ã‚Â°)
+        // Clamp body rotation (it's lying on ground, can't go past ~90°)
         const maxTilt = Math.PI / 2 + 0.15;
         if (Math.abs(this.group.rotation.x) > maxTilt) {
           this.group.rotation.x = Math.sign(this.group.rotation.x) * maxTilt;
@@ -2759,6 +2777,64 @@ class Enemy {
           );
         }
 
+        // ─── Arterial blood spurting continuously from severed neck stump ───
+        if (this.headDestroyed && (this.neckBloodTimer === undefined || this.neckBloodTimer > 0)) {
+          if (this.neckBloodTimer === undefined) this.neckBloodTimer = 2.8;
+          this.neckBloodTimer -= dt;
+          this.neckSpurtCD = (this.neckSpurtCD || 0) - dt;
+          if (this.neckSpurtCD <= 0) {
+            this.neckSpurtCD = 0.05; // ~20 spurts per second
+            const stumpPos = new THREE.Vector3();
+            if (this.neckStump) {
+              this.neckStump.getWorldPosition(stumpPos);
+            } else {
+              stumpPos.copy(this.group.position);
+              stumpPos.y += 1.4;
+            }
+
+            const bloodColors = [0x8a0303, 0xaa0000, 0x5e0000, 0xb80c0c];
+            const count = 3 + Math.floor(Math.random() * 3);
+            for (let s = 0; s < count; s++) {
+              const color = bloodColors[Math.floor(Math.random() * bloodColors.length)];
+              const size = 0.035 + Math.random() * 0.04;
+              const drop = new THREE.Mesh(
+                new THREE.BoxGeometry(size, size, size),
+                new THREE.MeshBasicMaterial({ color })
+              );
+              drop.position.copy(stumpPos).add(new THREE.Vector3(
+                (Math.random() - 0.5) * 0.1,
+                (Math.random() - 0.5) * 0.06,
+                (Math.random() - 0.5) * 0.1
+              ));
+              scene.add(drop);
+
+              // Upward & forward arching arterial spurts
+              const spurtVel = new THREE.Vector3(
+                (Math.random() - 0.5) * 2.2,
+                1.5 + Math.random() * 3.2,
+                (Math.random() - 0.5) * 2.2
+              );
+              bloodFountainParticles.push({
+                mesh: drop,
+                vel: spurtVel,
+                gravity: -13.5,
+                life: 0.6 + Math.random() * 0.5,
+                maxLife: 1.1,
+                size
+              });
+            }
+
+            // Expanding pool of blood on floor underneath
+            if (Math.random() < 0.35) {
+              spawnBloodPuddle(
+                stumpPos.x + (Math.random() - 0.5) * 0.4,
+                stumpPos.z + (Math.random() - 0.5) * 0.4,
+                0.16 + Math.random() * 0.22
+              );
+            }
+          }
+        }
+
         // Ã¢â€â‚¬Ã¢â€â‚¬ Check if settled (all velocities near zero)
         if (this.collapseTimer > 2.5) {
           const totalVel = Math.abs(r.groupVelX) + Math.abs(r.groupVelZ) +
@@ -2883,31 +2959,53 @@ class Enemy {
     enemyProjectiles.push({ mesh: proj, dir, speed: 17, life: 4.5, damage: this.damage });
   }
 
-  takeDamage(dmg) {
+  takeDamage(dmg, isHeadshot = false, shotDir = null, hitPoint = null) {
     if (!this.alive) return;
 
-    if (this.armor > 0) {
-      if (dmg <= this.armor) {
-        this.armor -= dmg;
-        dmg = 0;
-      } else {
-        dmg -= this.armor;
-        this.armor = 0;
-      }
-      this.armorFill.style.width = ((this.armor / this.maxArmor) * 100) + '%';
-    }
-
-    if (dmg > 0) {
+    if (isHeadshot) {
+      // Headshots bypass armor and deal direct critical damage
+      this.armor = 0;
+      if (this.armorFill) this.armorFill.style.width = '0%';
       this.hp = Math.max(0, this.hp - dmg);
-      this.hpFill.style.width = ((this.hp / this.maxHp) * 100) + '%';
+    } else {
+      if (this.armor > 0) {
+        if (dmg <= this.armor) {
+          this.armor -= dmg;
+          dmg = 0;
+        } else {
+          dmg -= this.armor;
+          this.armor = 0;
+        }
+        if (this.armorFill) this.armorFill.style.width = ((this.armor / this.maxArmor) * 100) + '%';
+      }
+
+      if (dmg > 0) {
+        this.hp = Math.max(0, this.hp - dmg);
+      }
     }
 
-    if (this.hp <= 0) this._die();
+    if (this.hpFill) this.hpFill.style.width = ((this.hp / this.maxHp) * 100) + '%';
+
+    if (this.hp <= 0) {
+      if (isHeadshot && !this.headDestroyed) {
+        this.explodeHead(shotDir, hitPoint);
+      } else {
+        this._die();
+      }
+    }
   }
 
   explodeHead(shotDir, hitPoint) {
     if (this.headDestroyed) return;
     this.headDestroyed = true;
+    this.neckBloodTimer = 2.8;
+
+    // Head blown off means INSTANT FATAL DEATH - cannot walk or shoot without head!
+    this.hp = 0;
+    this.armor = 0;
+    if (this.alive) {
+      this._die();
+    }
 
     // 1. Hide the intact head mesh and its facial features
     if (this.head) {
@@ -2915,18 +3013,18 @@ class Enemy {
     }
 
     // 2. Add bloody severed neck stump with meat & vertebrae bone to the body group
-    const stumpMat = new THREE.MeshLambertMaterial({ color: 0x5a0000 });
+    const stumpMat = new THREE.MeshLambertMaterial({ color: 0x6a0000 });
     const boneMat = new THREE.MeshLambertMaterial({ color: 0xd8d0c0 });
     const stump = new THREE.Group();
-    
+
     // Torn flesh ring
-    const meat = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 0.12, 8), stumpMat);
-    meat.position.y = 1.40;
+    const meat = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.17, 0.14, 10), stumpMat);
+    meat.position.y = 1.38;
     stump.add(meat);
 
     // Severed vertebrae bone in the center
-    const bone = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.14, 6), boneMat);
-    bone.position.y = 1.42;
+    const bone = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.16, 8), boneMat);
+    bone.position.y = 1.41;
     stump.add(bone);
 
     this.group.add(stump);
@@ -2951,8 +3049,8 @@ class Enemy {
 
     // 7. Extra ragdoll force: headless body snaps back hard
     if (this.ragdoll) {
-      this.ragdoll.groupVelX *= 2.0;
-      this.ragdoll.groupVelZ *= 2.0;
+      this.ragdoll.groupVelX *= 2.2;
+      this.ragdoll.groupVelZ *= 2.2;
     }
   }
 
@@ -3188,7 +3286,13 @@ function performBatSwing(isCharged) {
       let matched = false;
       enemy.group.traverse(c => { if (c === hitObj) matched = true; });
       if (matched) {
-        enemy.takeDamage(damage);
+        const hitPt = intersects[0].point.clone();
+        const isHead = hitPt.y > 1.3;
+        const swingDir = camera.getWorldDirection(new THREE.Vector3());
+        if (isCharged && isHead && !enemy.headDestroyed) {
+          enemy.explodeHead(swingDir, hitPt);
+        }
+        enemy.takeDamage(damage, isHead, swingDir, hitPt);
         showHitMarker();
         shakeIntensity = isCharged ? 0.22 : 0.08;
         break;
@@ -3365,21 +3469,21 @@ function playerShoot() {
 
       // Damage calculation
       let dmg = w.damage;
-      const isCloseShotgun = isShotgun && targetDist < 6.5;
+      const isCloseShotgun = isShotgun && targetDist < 7.5;
 
-      if (isHeadshot && w.id === 'deagle') {
+      if (isHeadshot && (w.id === 'deagle' || w.id === 'sniper')) {
         dmg = 9999;
       } else if (isHeadshot && isCloseShotgun) {
         dmg = 9999; // Instakill close-range shotgun decapitation
       } else {
-        dmg += Math.floor(Math.random() * (isShotgun ? 5 : 18)) + (isHeadshot ? (isShotgun ? 10 : 20) : 0);
+        dmg += Math.floor(Math.random() * (isShotgun ? 5 : 18)) + (isHeadshot ? (isShotgun ? 25 : 35) : 0);
       }
 
-      // Close-range shotgun headshot decapitation & gore explosion
-      if (isHeadshot && isCloseShotgun && hitEnemy.alive && !hitEnemy.headDestroyed) {
+      // Close-range shotgun or high-power headshot decapitation & gore explosion
+      if (isHeadshot && (isCloseShotgun || w.id === 'deagle' || w.id === 'sniper' || hitEnemy.hp <= dmg) && !hitEnemy.headDestroyed) {
         hitEnemy.explodeHead(shotDir, enemyHitPoint);
       }
-      hitEnemy.takeDamage(dmg);
+      hitEnemy.takeDamage(dmg, isHeadshot, shotDir, enemyHitPoint);
       showHitMarker();
       playHitSound();
     } else if (wallHitPoint) {
