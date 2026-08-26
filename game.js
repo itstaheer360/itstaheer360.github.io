@@ -812,16 +812,16 @@ function createBattlefieldLevel() {
     const c = document.createElement('canvas');
     c.width = 256; c.height = 256;
     const ctx = c.getContext('2d');
-    ctx.fillStyle = '#4a3a24'; ctx.fillRect(0,0,256,256);
-    for(let i=0;i<8000;i++){
-      ctx.fillStyle = Math.random()>0.5 ? '#6b4424' : '#252010';
-      ctx.fillRect(Math.random()*256, Math.random()*256, Math.random()*3+1, Math.random()*3+1);
+    ctx.fillStyle = '#4a3a24'; ctx.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 8000; i++) {
+      ctx.fillStyle = Math.random() > 0.5 ? '#6b4424' : '#252010';
+      ctx.fillRect(Math.random() * 256, Math.random() * 256, Math.random() * 3 + 1, Math.random() * 3 + 1);
     }
-    for(let i=0;i<100;i++){
+    for (let i = 0; i < 100; i++) {
       ctx.strokeStyle = '#121105';
       ctx.beginPath();
-      ctx.moveTo(Math.random()*256, Math.random()*256);
-      ctx.lineTo(Math.random()*256, Math.random()*256);
+      ctx.moveTo(Math.random() * 256, Math.random() * 256);
+      ctx.lineTo(Math.random() * 256, Math.random() * 256);
       ctx.stroke();
     }
     const tex = new THREE.CanvasTexture(c);
@@ -1268,10 +1268,10 @@ function createBattlefieldLevel() {
     wSide2.position.set(2.4, 2.0, -1.12);
     group.add(wSide2);
 
-    // Engine hood
+    // Engine hood 
     const hood = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.0, 2.2), rust2Mat);
     hood.position.set(3.8, 1.3, 0);
-    hood.rotation.z = (Math.random() > 0.5) ? 0.3 : 0; // popped hood
+    hood.rotation.z = (Math.random() > 0.5) ? 0.3 : 0;
     group.add(hood);
 
     // Grille & Headlights
@@ -1289,14 +1289,14 @@ function createBattlefieldLevel() {
     // Front Bumper
     const bumper = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.3, 2.4), darkMetMat);
     bumper.position.set(4.5, 0.8, 0);
-    bumper.rotation.x = (Math.random() - 0.5) * 0.6; // hanging off
+    bumper.rotation.x = (Math.random() - 0.5) * 0.6;
     bumper.rotation.z = (Math.random() - 0.5) * 0.3;
     group.add(bumper);
 
     // Exhaust pipe
     const exhaust = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 2.5, 8), rustMat);
     exhaust.position.set(1.1, 2.0, 1.2);
-    exhaust.rotation.x = (Math.random() - 0.5) * 0.4; // bent stack
+    exhaust.rotation.x = (Math.random() - 0.5) * 0.4;
     group.add(exhaust);
 
     // Flatbed
@@ -1305,13 +1305,13 @@ function createBattlefieldLevel() {
     bed.castShadow = true; bed.receiveShadow = true;
     group.add(bed);
 
-    // Wheels (6) - High detail
+    // Wheels (6)
     [[-2.5, -1.1], [-1.0, -1.1], [2.6, -1.1], [-2.5, 1.1], [-1.0, 1.1], [2.6, 1.1]].forEach(([wx, wz]) => {
-      if (Math.random() > 0.9) return; // missing tire
+      if (Math.random() > 0.9) return;
       const wGroup = new THREE.Group();
       wGroup.position.set(wx, 0.5, wz);
       wGroup.rotation.x = Math.PI / 2;
-      wGroup.rotation.y = (Math.random() - 0.5) * 0.35; // wobbly
+      wGroup.rotation.y = (Math.random() - 0.5) * 0.35;
 
       const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.3, 24), darkMetMat);
       wGroup.add(tire);
@@ -1392,25 +1392,24 @@ function createBattlefieldLevel() {
     // Commander's Cupola
     const cupola = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.3, 12), rustMat);
     cupola.position.set(-0.5, 1.0, -0.5);
-    cupola.rotation.z = (Math.random() > 0.5) ? 0.45 : 0; // popped open
+    cupola.rotation.z = (Math.random() > 0.5) ? 0.45 : 0;
     tGroup.add(cupola);
 
     // Main Gun Barrel
     const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 4.0, 12), darkMetMat);
     barrel.rotation.z = Math.PI / 2;
     barrel.position.set(3.5, 0.5, 0);
-    barrel.rotation.z += Math.random() * 0.3; // barrel droop
+    barrel.rotation.z += Math.random() * 0.3;
     tGroup.add(barrel);
 
     // Muzzle brake
     const brake = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.4, 12), darkMetMat);
     brake.rotation.z = Math.PI / 2;
     brake.position.set(5.5, 0.5, 0);
-    brake.rotation.z += (Math.random() - 0.5) * 0.2; // bent muzzle brake
+    brake.rotation.z += (Math.random() - 0.5) * 0.2;
     tGroup.add(brake);
 
     group.add(tGroup);
-
     // Track skirts
     [-1.7, 1.7].forEach(zOff => {
       const skirt = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.8, 0.2), rust2Mat);
@@ -1566,8 +1565,106 @@ function createBattlefieldLevel() {
 }
 
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ Dispatcher: build the right level based on map id
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+//  WAVE 10 BOSS ARENA (BLANK GROUND WITH 3 HIDING BUNKERS & SNIPER CORNER TOWER)
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function createBossArena(mapId) {
+  const HALF = 38;
+  const WALL_H = 6.0;
+
+  // Atmospheric tense combat lighting and fog
+  scene.background = new THREE.Color(0x18050a);
+  scene.fog = new THREE.FogExp2(0x220810, 0.012);
+
+  const floorMat = mapId === 'warfront'
+    ? new THREE.MeshLambertMaterial({ color: 0x8a6035, map: makeGridTexture('#805525', '#553515') })
+    : new THREE.MeshLambertMaterial({ color: 0x303040, map: makeGridTexture('#404055', '#252535') });
+
+  const wallMat = new THREE.MeshLambertMaterial({
+    map: makeBrickTexture(76, 4)
+  });
+  const concMat = new THREE.MeshLambertMaterial({ color: 0x484d52 });
+  const darkMetal = new THREE.MeshLambertMaterial({ color: 0x22252a });
+  const rustMat = new THREE.MeshLambertMaterial({ color: 0x5a3320 });
+
+  function box(x, y, z, w, h, d, mat) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    m.position.set(x, y, z);
+    m.castShadow = true;
+    m.receiveShadow = true;
+    scene.add(m);
+    levelMeshes.push(m);
+    collidables.push(new THREE.Box3().setFromObject(m));
+    return m;
+  }
+
+  // 1. Blank, Open Arena Floor
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(HALF * 2, HALF * 2), floorMat);
+  floor.rotation.x = -Math.PI / 2;
+  floor.receiveShadow = true;
+  scene.add(floor);
+  levelMeshes.push(floor);
+
+  // 2. Outer Boundary Walls
+  box(0, WALL_H / 2, -HALF, HALF * 2, WALL_H, 1, wallMat);
+  box(0, WALL_H / 2, HALF, HALF * 2, WALL_H, 1, wallMat);
+  box(-HALF, WALL_H / 2, 0, 1, WALL_H, HALF * 2, wallMat);
+  box(HALF, WALL_H / 2, 0, 1, WALL_H, HALF * 2, wallMat);
+
+  // 3. High Ground: Elevated Sniper Watchtower Nest in the Far Corner (X: 28, Z: -28)
+  const tx = 28, tz = -28;
+  // Main concrete tower pillar base
+  box(tx, 2.2, tz, 5.0, 4.4, 5.0, concMat);
+  // High floor platform at Y = 4.4
+  box(tx, 4.4, tz, 7.8, 0.4, 7.8, darkMetal);
+  // High parapet walls / sniper rifle rest along the front and sides
+  box(tx, 5.05, tz + 3.6, 7.8, 0.9, 0.5, concMat); // Front ledge
+  box(tx - 3.6, 5.05, tz, 0.5, 0.9, 7.8, concMat); // Left ledge
+  box(tx + 3.6, 5.05, tz, 0.5, 0.9, 7.8, concMat); // Right ledge
+  box(tx, 5.05, tz - 3.6, 7.8, 0.9, 0.5, concMat); // Back ledge
+  // Sandbags along front sniper ledge
+  box(tx, 4.85, tz + 3.2, 5.5, 0.5, 0.7, rustMat);
+
+  // 4. EXACTLY 3 STRATEGIC HIDING SPOTS (Full-Cover Reinforced Concrete Bunkers)
+  // â”€â”€ Hiding Spot 1: Left Heavy Bunker â”€â”€
+  const b1x = -15, b1z = -5;
+  box(b1x, 1.4, b1z, 5.8, 2.8, 1.4, concMat); // Front barrier
+  box(b1x - 2.5, 1.4, b1z + 1.8, 1.4, 2.8, 4.2, concMat); // Side wing
+  box(b1x + 0.6, 0.4, b1z + 1.2, 3.6, 0.8, 0.8, rustMat); // Sandbag base
+
+  // â”€â”€ Hiding Spot 2: Center Reinforced Defense Wall â”€â”€
+  const b2x = 0, b2z = 7;
+  box(b2x, 1.4, b2z, 7.2, 2.8, 1.6, concMat); // Central main barrier
+  box(b2x - 3.2, 1.4, b2z - 1.6, 1.4, 2.8, 3.8, concMat); // Left return wing
+  box(b2x + 3.2, 1.4, b2z - 1.6, 1.4, 2.8, 3.8, concMat); // Right return wing
+  box(b2x, 0.45, b2z - 1.2, 4.5, 0.9, 0.9, rustMat); // Sandbags
+
+  // â”€â”€ Hiding Spot 3: Right Heavy Bunker â”€â”€
+  const b3x = 16, b3z = 2;
+  box(b3x, 1.4, b3z, 5.8, 2.8, 1.4, concMat); // Front barrier
+  box(b3x + 2.5, 1.4, b3z - 1.8, 1.4, 2.8, 4.2, concMat); // Side wing
+  box(b3x - 0.6, 0.4, b3z - 1.2, 3.6, 0.8, 0.8, rustMat); // Sandbags
+
+  // Lighting
+  const ambLight = new THREE.AmbientLight(0xff6070, 1.4);
+  scene.add(ambLight); levelMeshes.push(ambLight);
+  const dir = new THREE.DirectionalLight(0xff3040, 2.4);
+  dir.position.set(-20, 25, 15);
+  scene.add(dir); levelMeshes.push(dir);
+
+  // Red beacon warning light on sniper tower
+  addPointLight(tx, 6.0, tz, 0xff0022, 4.5, 25);
+  addPointLight(b1x, 2.5, b1z, 0xffaa44, 1.5, 14);
+  addPointLight(b2x, 2.5, b2z, 0xffaa44, 1.5, 14);
+  addPointLight(b3x, 2.5, b3z, 0xffaa44, 1.5, 14);
+}
+
+// â”€â”€ Dispatcher: build the right level based on map id
 function createLevel(mapId) {
+  if (wave === 10) {
+    createBossArena(mapId);
+    return;
+  }
   if (mapId === 'warfront') {
     // Warfront atmosphere
     scene.background = new THREE.Color(0xc8803a);
@@ -3073,13 +3170,349 @@ class Enemy {
 }
 
 // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+//  WAVE 10 APEX SNIPER BOSS CLASS
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+class BossSniper {
+  constructor(x, y, z) {
+    this.type = 'boss_sniper';
+    this.isBoss = true;
+    this.hp = 1800;
+    this.maxHp = 1800;
+    this.alive = true;
+    this.damage = 50; // 2 shots = 100 HP instant death
+
+    // State machine: tracking (2.2s) -> locking (1.0s flash/beep) -> firing -> cooldown (2.6s)
+    this.state = 'tracking';
+    this.stateTimer = 2.2;
+    this.beepTimer = 0;
+    this.flashTimer = 0;
+    this.lockedAimPos = new THREE.Vector3();
+    this.barrelWorldPos = new THREE.Vector3();
+
+    this.headDestroyed = false;
+    this._deadBodyBox = null;
+
+    this._buildMesh(x, y, z);
+    this._buildLaser();
+    this._updateBossHUD();
+  }
+
+  _buildMesh(x, y, z) {
+    this.group = new THREE.Group();
+    this.group.position.set(x, y, z);
+
+    // Prone materials
+    const zombieSkin = new THREE.MeshLambertMaterial({ color: 0x224822 });
+    const clothesMat = new THREE.MeshLambertMaterial({ color: 0x181e18 });
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0022 });
+    const gunDark = new THREE.MeshLambertMaterial({ color: 0x111113 });
+    const metalMat = new THREE.MeshLambertMaterial({ color: 0x2c3038 });
+    const lensMat = new THREE.MeshBasicMaterial({ color: 0x00e1ff });
+
+    // 1. Prone Body: Torso flat on platform
+    this.torso = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.32, 1.15), clothesMat);
+    this.torso.position.set(0, 0.16, 0.4);
+    this.torso.castShadow = true;
+    this.group.add(this.torso);
+
+    // 2. Prone Legs extending backwards
+    [-0.20, 0.20].forEach(lx => {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.22, 0.95), clothesMat);
+      leg.position.set(lx, 0.11, 1.35);
+      this.group.add(leg);
+    });
+
+    // 3. Prone Arms resting forward on sandbags holding sniper
+    [-0.30, 0.30].forEach((ax, idx) => {
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 0.85), clothesMat);
+      arm.position.set(ax, 0.12, -0.25);
+      arm.rotation.y = idx === 0 ? 0.2 : -0.2;
+      this.group.add(arm);
+    });
+
+    // 4. Head raised slightly looking down into arena
+    this.head = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.42, 0.44), zombieSkin);
+    this.head.position.set(0, 0.38, -0.32);
+    this.head.rotation.x = 0.18;
+    this.group.add(this.head);
+
+    // Glowing Red Eyes
+    [-0.10, 0.10].forEach(ex => {
+      const eye = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.05, 0.06), eyeMat);
+      eye.position.set(ex, 0.04, -0.23);
+      this.head.add(eye);
+    });
+
+    // 5. Heavy .50 Cal Sniper Rifle Group mounted on sandbags
+    this.gunPivot = new THREE.Group();
+    this.gunPivot.position.set(0, 0.32, -0.45);
+
+    // Rifle Receiver & Stock
+    const receiver = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.20, 0.75), gunDark);
+    receiver.position.set(0, 0, 0);
+    this.gunPivot.add(receiver);
+
+    const stock = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.24, 0.55), metalMat);
+    stock.position.set(0, -0.04, 0.55);
+    this.gunPivot.add(stock);
+
+    // Massive .50 Cal Barrel (3.2m long)
+    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 3.2, 12), metalMat);
+    barrel.rotation.x = Math.PI / 2;
+    barrel.position.set(0, 0.02, -1.8);
+    this.gunPivot.add(barrel);
+
+    // Heavy Muzzle Brake
+    const muzzleBrake = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.12, 0.35), gunDark);
+    muzzleBrake.position.set(0, 0.02, -3.45);
+    this.gunPivot.add(muzzleBrake);
+
+    // High-Magnification Sniper Scope
+    const scopeTube = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.65, 12), gunDark);
+    scopeTube.rotation.x = Math.PI / 2;
+    scopeTube.position.set(0, 0.18, -0.1);
+    this.gunPivot.add(scopeTube);
+
+    const scopeLens = new THREE.Mesh(new THREE.CircleGeometry(0.055, 12), lensMat);
+    scopeLens.position.set(0, 0.18, -0.43);
+    scopeLens.rotation.y = Math.PI;
+    this.gunPivot.add(scopeLens);
+
+    // Bipod legs planted down
+    [-0.22, 0.22].forEach(bx => {
+      const bipod = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.45, 6), metalMat);
+      bipod.position.set(bx, -0.16, -1.2);
+      bipod.rotation.z = bx > 0 ? -0.35 : 0.35;
+      bipod.rotation.x = 0.2;
+      this.gunPivot.add(bipod);
+    });
+
+    // Barrel tip anchor point
+    this.muzzleTip = new THREE.Object3D();
+    this.muzzleTip.position.set(0, 0.02, -3.65);
+    this.gunPivot.add(this.muzzleTip);
+
+    this.group.add(this.gunPivot);
+    scene.add(this.group);
+  }
+
+  _buildLaser() {
+    // 3D Red Laser targeting beam
+    const laserGeo = new THREE.CylinderGeometry(0.022, 0.022, 1, 6);
+    laserGeo.rotateX(Math.PI / 2);
+    laserGeo.translate(0, 0, 0.5);
+
+    this.laserMat = new THREE.MeshBasicMaterial({
+      color: 0xff0022,
+      transparent: true,
+      opacity: 0.85,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+
+    this.laserMesh = new THREE.Mesh(laserGeo, this.laserMat);
+    this.laserMesh.visible = false;
+    scene.add(this.laserMesh);
+  }
+
+  update(dt) {
+    if (!this.alive) {
+      if (this.laserMesh) this.laserMesh.visible = false;
+      return;
+    }
+
+    // Get current muzzle tip world position
+    this.muzzleTip.getWorldPosition(this.barrelWorldPos);
+
+    // Player head target
+    const playerTarget = camera.position.clone();
+
+    if (this.state === 'tracking') {
+      // 1. AIM & TRACK PLAYER REAL-TIME
+      this.stateTimer -= dt;
+      this.gunPivot.lookAt(playerTarget);
+
+      // Aim entire body slightly towards player direction
+      const angle = Math.atan2(camera.position.x - this.group.position.x, camera.position.z - this.group.position.z);
+      this.group.rotation.y = angle + Math.PI;
+
+      // Update laser from barrel to player position
+      this._updateLaserBeam(this.barrelWorldPos, playerTarget, 0.7, 0xff0022);
+      this.laserMesh.visible = true;
+
+      // When tracking time expires, LOCK IN PLACE!
+      if (this.stateTimer <= 0) {
+        this.state = 'locking';
+        this.stateTimer = 1.0; // 1.0 second warning lock-on before firing!
+        this.lockedAimPos.copy(playerTarget);
+        this.beepTimer = 0;
+        this.flashTimer = 0;
+
+        // Show screen warning banner
+        const warnEl = document.getElementById('laser-lock-warning');
+        if (warnEl) warnEl.classList.remove('hidden');
+      }
+
+    } else if (this.state === 'locking') {
+      // 2. LASER LOCKED IN PLACE & FLASHING RAPIDLY WITH WARNING BEEPS
+      this.stateTimer -= dt;
+      this.flashTimer += dt;
+      this.beepTimer += dt;
+
+      // Warning audio pulse
+      if (this.beepTimer >= 0.18) {
+        this.beepTimer = 0;
+        playLockOnBeep(1.0 + (1.0 - this.stateTimer) * 0.5);
+      }
+
+      // Violent laser beam strobe flash (alternating bright red & hot white)
+      const flash = Math.sin(this.flashTimer * 45) > 0;
+      this._updateLaserBeam(
+        this.barrelWorldPos,
+        this.lockedAimPos,
+        flash ? 1.0 : 0.25,
+        flash ? 0xffffff : 0xff0011
+      );
+      this.laserMesh.visible = true;
+
+      // Fire when 1-second lock-on expires!
+      if (this.stateTimer <= 0) {
+        this._fireSniperShot();
+        this.state = 'cooldown';
+        this.stateTimer = 2.6; // Bolt cycle / cooldown
+        this.laserMesh.visible = false;
+
+        const warnEl = document.getElementById('laser-lock-warning');
+        if (warnEl) warnEl.classList.add('hidden');
+      }
+
+    } else if (this.state === 'cooldown') {
+      // 3. BOLT RE-CYCLE & RE-ACQUISITION COOLDOWN
+      this.stateTimer -= dt;
+      this.laserMesh.visible = false;
+
+      if (this.stateTimer <= 0) {
+        this.state = 'tracking';
+        this.stateTimer = 2.2;
+      }
+    }
+  }
+
+  _updateLaserBeam(start, target, opacity, colorHex) {
+    const dist = start.distanceTo(target);
+    this.laserMesh.position.copy(start);
+    this.laserMesh.lookAt(target);
+    this.laserMesh.scale.set(1, 1, dist);
+    this.laserMat.opacity = opacity;
+    this.laserMat.color.setHex(colorHex);
+  }
+
+  _fireSniperShot() {
+    if (!player.alive) return;
+
+    // 1. Play massive .50 cal thunderous boom SFX
+    playBossSniperShot();
+
+    // 2. Muzzle flash and heavy blast smoke at boss barrel
+    spawnMuzzleSmoke('sniper', this.barrelWorldPos, this.lockedAimPos.clone().sub(this.barrelWorldPos).normalize());
+
+    // 3. Raycast along locked trajectory to check if player or cover was hit
+    const shotDir = this.lockedAimPos.clone().sub(this.barrelWorldPos).normalize();
+    const ray = new THREE.Ray(this.barrelWorldPos.clone(), shotDir);
+
+    // Check collision with cover bunkers / level geometry
+    let coverHitDist = Infinity;
+    const pt = new THREE.Vector3();
+    for (const c of collidables) {
+      if (ray.intersectBox(c, pt)) {
+        const d = this.barrelWorldPos.distanceTo(pt);
+        if (d < coverHitDist) coverHitDist = d;
+      }
+    }
+
+    // Check distance to player
+    const playerDist = this.barrelWorldPos.distanceTo(camera.position);
+
+    // Check if player is near the locked line of fire (within hit cylinder)
+    const playerToRayDist = ray.distanceToPoint(camera.position);
+
+    // Player takes damage ONLY IF:
+    // a) Player is close enough to the locked crosshair position (didn't dodge behind cover)
+    // b) Cover bunker does NOT block line-of-fire
+    if (playerToRayDist < 1.45 && playerDist < coverHitDist) {
+      // 50 DAMAGE (2 shots = 100 HP = instant fatal death)
+      player.health = Math.max(0, player.health - this.damage);
+      updateHealthHUD();
+      triggerDamageFlash();
+
+      if (player.health <= 0) {
+        playerDie();
+      }
+    }
+  }
+
+  takeDamage(dmg, canDecapitate = false, shotDir = null, hitPoint = null) {
+    if (!this.alive) return;
+
+    this.hp = Math.max(0, this.hp - dmg);
+    this._updateBossHUD();
+
+    // Hit reaction
+    if (this.head) {
+      this.head.rotation.x = -0.15;
+      setTimeout(() => { if (this.head) this.head.rotation.x = 0.18; }, 90);
+    }
+
+    if (this.hp <= 0) {
+      this._die();
+    }
+  }
+
+  _updateBossHUD() {
+    const bar = document.getElementById('boss-bar-fill');
+    const txt = document.getElementById('boss-hp-text');
+    if (bar) bar.style.width = Math.max(0, (this.hp / this.maxHp) * 100) + '%';
+    if (txt) txt.textContent = `${this.hp} / ${this.maxHp}`;
+  }
+
+  explodeHead(shotDir, hitPoint) {
+    // Boss head cannot be popped at distance, dies with honor
+  }
+
+  _die() {
+    this.alive = false;
+    if (this.laserMesh) scene.remove(this.laserMesh);
+
+    const warnEl = document.getElementById('laser-lock-warning');
+    if (warnEl) warnEl.classList.add('hidden');
+
+    const bossHud = document.getElementById('boss-hud');
+    if (bossHud) bossHud.classList.add('hidden');
+
+    // Death sound & effects
+    playDeathSound();
+    playGoreHeadPopSound();
+    spawnBloodFountain(this.group.position.clone().add(new THREE.Vector3(0, 1, 0)), new THREE.Vector3(0, 1, 0));
+
+    // Prone death slouch
+    this.torso.rotation.z = 0.45;
+    this.head.position.y = 0.12;
+
+    kills++;
+    document.getElementById('kills').textContent = kills;
+  }
+}
+
 //  WAVE MANAGEMENT
 // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 function spawnWave() {
-  // Dispose previous wave Ã¢â‚¬â€ also remove dead body hitboxes from collidables
+  // Dispose previous wave â€” also remove dead body hitboxes from collidables
   enemies.forEach(e => {
     scene.remove(e.group);
     if (e.hpEl && e.hpEl.parentNode) e.hpEl.remove();
+    if (e.laserMesh) scene.remove(e.laserMesh);
     if (e._deadBodyBox) {
       const idx = collidables.indexOf(e._deadBodyBox);
       if (idx !== -1) collidables.splice(idx, 1);
@@ -3088,6 +3521,44 @@ function spawnWave() {
   enemies = [];
   enemyProjectiles.forEach(p => scene.remove(p.mesh));
   enemyProjectiles = [];
+
+  // Hide boss HUD elements if not wave 10
+  const bossHud = document.getElementById('boss-hud');
+  const warnEl = document.getElementById('laser-lock-warning');
+  if (bossHud && wave !== 10) bossHud.classList.add('hidden');
+  if (warnEl) warnEl.classList.add('hidden');
+
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  //  WAVE 10: APEX SNIPER BOSS ENCOUNTER
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  if (wave === 10) {
+    // Clear all previous level geometry, vehicles, and barriers for clean blank arena
+    levelMeshes.forEach(m => scene.remove(m));
+    levelMeshes.length = 0;
+    collidables.length = 0;
+    vehicleColliders.length = 0;
+
+    // Build the blank boss arena with 3 strategic hiding spots and high sniper tower
+    createBossArena(selectedMap);
+
+    // Position player behind safety in the arena facing the sniper nest
+    camera.position.set(0, player.eyeHeight, 22);
+    player.yaw = 0;
+    player.pitch = 0;
+
+    // Spawn the single Apex Sniper Boss laying down on the high ground watchtower (28, 4.85, -28)
+    const boss = new BossSniper(28, 4.85, -28);
+    enemies.push(boss);
+
+    document.getElementById('enemy-num').textContent = 1;
+    document.getElementById('wave-num').textContent = '10 (BOSS)';
+    if (bossHud) {
+      bossHud.classList.remove('hidden');
+      document.getElementById('boss-hp-text').textContent = '1800 / 1800';
+      document.getElementById('boss-bar-fill').style.width = '100%';
+    }
+    return;
+  }
 
   const count = Math.min(4 + wave * 2, 22);
   const TAU = Math.PI * 2;
@@ -3126,9 +3597,75 @@ function spawnWave() {
   document.getElementById('wave-num').textContent = wave;
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+/** Rapid electronic lock-on warning beep */
+function playLockOnBeep(pitchMult = 1.0) {
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(1400 * pitchMult, now);
+  osc.frequency.exponentialRampToValueAtTime(2200 * pitchMult, now + 0.07);
+  g.gain.setValueAtTime(0.35, now);
+  g.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+  osc.connect(g);
+  g.connect(audioCtx.destination);
+  osc.start(now);
+  osc.stop(now + 0.07);
+}
+
+/** Thunderous .50 cal boss sniper rifle shot with deep echoing reverb */
+function playBossSniperShot() {
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+
+  // 1. Supersonic crack
+  const crackLen = Math.floor(audioCtx.sampleRate * 0.08);
+  const crackBuf = audioCtx.createBuffer(1, crackLen, audioCtx.sampleRate);
+  const crackDat = crackBuf.getChannelData(0);
+  for (let i = 0; i < crackLen; i++) crackDat[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / crackLen, 0.4);
+  const crackSrc = audioCtx.createBufferSource();
+  crackSrc.buffer = crackBuf;
+  const hp = audioCtx.createBiquadFilter();
+  hp.type = 'highpass'; hp.frequency.value = 1800;
+  const cg = audioCtx.createGain();
+  cg.gain.setValueAtTime(1.8, now);
+  cg.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+  crackSrc.connect(hp); hp.connect(cg); cg.connect(audioCtx.destination);
+  crackSrc.start(now);
+
+  // 2. Heavy low-end explosive cannon boom
+  const boomLen = Math.floor(audioCtx.sampleRate * 0.85);
+  const boomBuf = audioCtx.createBuffer(1, boomLen, audioCtx.sampleRate);
+  const boomDat = boomBuf.getChannelData(0);
+  for (let i = 0; i < boomLen; i++) boomDat[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / boomLen, 1.2);
+  const boomSrc = audioCtx.createBufferSource();
+  boomSrc.buffer = boomBuf;
+  const lp = audioCtx.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.setValueAtTime(320, now);
+  lp.frequency.exponentialRampToValueAtTime(45, now + 0.85);
+  const bg = audioCtx.createGain();
+  bg.gain.setValueAtTime(2.4, now);
+  bg.gain.exponentialRampToValueAtTime(0.001, now + 0.85);
+  boomSrc.connect(lp); lp.connect(bg); bg.connect(audioCtx.destination);
+  boomSrc.start(now);
+
+  // 3. Sub-bass shockwave sweep
+  const osc = audioCtx.createOscillator();
+  const og = audioCtx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(160, now);
+  osc.frequency.exponentialRampToValueAtTime(28, now + 0.65);
+  og.gain.setValueAtTime(1.6, now);
+  og.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
+  osc.connect(og); og.connect(audioCtx.destination);
+  osc.start(now); osc.stop(now + 0.65);
+}
+
+// ─────────────────────────────────────────────────────────────
 //  PLAYER COLLISION
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ─────────────────────────────────────────────────────────────
 function playerCollidesAt(x, y, z) {
   const RADIUS = 0.32;
   const box = new THREE.Box3(
@@ -3606,7 +4143,7 @@ function finishReload() {
   w.reserveAmmo -= taken;
 
   document.getElementById('ammo-current').textContent = w.ammo;
-    document.getElementById('ammo-reserve').textContent = w.reserveAmmo; const sep = document.querySelector('.ammo-sep'); if (sep) sep.style.display = 'inline';
+  document.getElementById('ammo-reserve').textContent = w.reserveAmmo; const sep = document.querySelector('.ammo-sep'); if (sep) sep.style.display = 'inline';
 
   if (isShotgun && w.ammo < w.maxAmmo && w.reserveAmmo > 0) {
     // Shotgun needs to load more shells. Restart the reload cycle immediately.
@@ -4498,6 +5035,10 @@ function updateProjectiles(dt) {
 //  GAME FLOW
 // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 function startGame() {
+  const bossHud = document.getElementById('boss-hud');
+  if (bossHud) bossHud.classList.add('hidden');
+  const warnEl = document.getElementById('laser-lock-warning');
+  if (warnEl) warnEl.classList.add('hidden');
   // Ã¢â€â‚¬Ã¢â€â‚¬ Read & apply map selection
   const mapSelectEl = document.getElementById('map-select');
   if (mapSelectEl) selectedMap = mapSelectEl.value;
@@ -4659,12 +5200,23 @@ function checkWaveComplete() {
   player.health = player.maxHealth;
   updateHealthHUD();
 
+  // Hide boss HUD elements
+  const bossHud = document.getElementById('boss-hud');
+  if (bossHud) bossHud.classList.add('hidden');
+  const warnEl = document.getElementById('laser-lock-warning');
+  if (warnEl) warnEl.classList.add('hidden');
+
   gameState = 'wavecomplete';
   if (!isMobile) document.exitPointerLock();
   document.getElementById('click-to-start').style.display = 'none';
 
-  document.getElementById('wave-complete-text').textContent =
-    `Wave ${wave} cleared!  ${enemies.length} enemies eliminated.`;
+  if (wave === 10) {
+    document.getElementById('wave-complete-text').textContent =
+      `APEX SNIPER BOSS ELIMINATED! You conquered Wave 10!`;
+  } else {
+    document.getElementById('wave-complete-text').textContent =
+      `Wave ${wave} cleared!  ${enemies.length} enemies eliminated.`;
+  }
   document.getElementById('wave-complete').classList.remove('hidden');
 
   let cd = 3;
@@ -4679,6 +5231,16 @@ function checkWaveComplete() {
       waveCountdownTimer = null;
       document.getElementById('wave-complete').classList.add('hidden');
       wave++;
+
+      if (wave === 11) {
+        // Re-construct standard battlefield after boss arena
+        levelMeshes.forEach(m => scene.remove(m));
+        levelMeshes.length = 0;
+        collidables.length = 0;
+        vehicleColliders.length = 0;
+        createLevel(selectedMap);
+        camera.position.set(0, player.eyeHeight, 5);
+      }
 
       // Full health restoration after every wave
       player.health = player.maxHealth;
@@ -4723,6 +5285,10 @@ function checkWaveComplete() {
 }
 
 function cleanupAndGoMenu() {
+  const bossHud = document.getElementById('boss-hud');
+  if (bossHud) bossHud.classList.add('hidden');
+  const warnEl = document.getElementById('laser-lock-warning');
+  if (warnEl) warnEl.classList.add('hidden');
   if (waveCountdownTimer) { clearInterval(waveCountdownTimer); waveCountdownTimer = null; }
   enemies.forEach(e => {
     scene.remove(e.group);

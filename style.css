@@ -496,6 +496,120 @@ kbd {
 
 #enemy-counter span { color: #ff8800; }
 
+/* ── Boss Health Bar ── */
+#boss-hud {
+  position: absolute;
+  top: 68px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(520px, 90vw);
+  background: rgba(12, 3, 8, 0.92);
+  border: 1px solid rgba(255, 30, 60, 0.4);
+  box-shadow: 0 0 25px rgba(255, 0, 50, 0.35), inset 0 0 15px rgba(255, 0, 50, 0.15);
+  padding: 10px 16px;
+  backdrop-filter: blur(10px);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  animation: bossHudIntro 0.5s ease-out;
+}
+
+@keyframes bossHudIntro {
+  from { opacity: 0; transform: translate(-50%, -20px) scale(0.95); }
+  to { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+
+.boss-hud-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-title);
+  font-size: 0.72rem;
+  letter-spacing: 0.15em;
+  font-weight: 700;
+}
+
+.boss-warning-icon {
+  color: #ff2244;
+  font-size: 1rem;
+  animation: bossPulseIcon 1s infinite alternate;
+}
+
+@keyframes bossPulseIcon {
+  from { opacity: 0.5; filter: drop-shadow(0 0 2px #ff0033); }
+  to { opacity: 1; filter: drop-shadow(0 0 8px #ff0033); }
+}
+
+.boss-name {
+  color: #ff3b5c;
+  text-shadow: 0 0 12px rgba(255, 30, 60, 0.8);
+  font-weight: 900;
+}
+
+.boss-hp-num {
+  color: var(--text-dim);
+  font-size: 0.75rem;
+}
+
+.boss-bar-frame {
+  width: 100%;
+  height: 10px;
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+#boss-bar-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #ff0044, #ff4d00, #ff0044);
+  box-shadow: 0 0 12px #ff0033;
+  transition: width 0.15s ease-out;
+}
+
+/* ── Laser Lock Warning Overlay ── */
+#laser-lock-warning {
+  position: absolute;
+  top: 130px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 25;
+  pointer-events: none;
+}
+
+.laser-warning-box {
+  background: rgba(200, 0, 0, 0.85);
+  border: 2px solid #ff1e3c;
+  box-shadow: 0 0 30px rgba(255, 0, 0, 0.8);
+  color: #ffffff;
+  font-family: var(--font-title);
+  font-weight: 900;
+  font-size: 0.85rem;
+  letter-spacing: 0.2em;
+  padding: 8px 24px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: laserLockFlash 0.22s infinite alternate;
+}
+
+.laser-flash-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 10px #ffffff;
+}
+
+@keyframes laserLockFlash {
+  from { background: rgba(220, 0, 0, 0.95); transform: scale(1); filter: brightness(1.2); }
+  to { background: rgba(100, 0, 0, 0.7); transform: scale(1.04); filter: brightness(0.85); }
+}
+
 /* ── Bottom HUD ── */
 #hud-bottom {
   position: absolute;

@@ -176,6 +176,25 @@
         <div id="kill-count" aria-live="polite"><span id="kills">0</span> KILLS</div>
       </div>
 
+      <!-- Boss Health & Alert Banner -->
+      <div id="boss-hud" class="hidden" aria-live="assertive">
+        <div class="boss-hud-header">
+          <span class="boss-warning-icon">⚠</span>
+          <span class="boss-name">DEADEYE — APEX SNIPER BOSS</span>
+          <span class="boss-hp-num" id="boss-hp-text">1800 / 1800</span>
+        </div>
+        <div class="boss-bar-frame">
+          <div id="boss-bar-fill"></div>
+        </div>
+      </div>
+
+      <div id="laser-lock-warning" class="hidden" aria-live="assertive">
+        <div class="laser-warning-box">
+          <span class="laser-flash-dot"></span>
+          <span>SNIPER LOCKED — GET TO COVER!</span>
+        </div>
+      </div>
+
       <!-- Enemy counter -->
       <div id="enemy-counter" aria-live="polite">
         ENEMIES: <span id="enemy-num">0</span>
