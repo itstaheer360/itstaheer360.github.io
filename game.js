@@ -3868,7 +3868,7 @@ function playerShoot() {
   if (w.melee) return;
 
   // â”€â”€â”€ RANGED â”€â”€â”€
-  if (w.ammo <= 0 && !w.isReloading) return;
+  if (w.ammo <= 0 && !w.isReloading && !isInfiniteAmmo) return;
 
   // Interrupt reload if firing and we have ammo
   if (w.isReloading) {
@@ -3891,7 +3891,7 @@ function playerShoot() {
     }
   }
 
-  w.ammo--;
+  if (!isInfiniteAmmo) w.ammo--;
   player.shootCooldown = w.shootRate;
 
   // Sound
@@ -4107,7 +4107,7 @@ function playerShoot() {
   }
 
   // Start shotgun pump animation
-  if (isShotgun && w.ammo > 0) {
+  if (isShotgun && (w.ammo > 0 || isInfiniteAmmo)) {
     shotgunPumpActive = true;
     shotgunPumpTimer = 0;
     shotgunPumpSound1 = false;
@@ -4120,7 +4120,7 @@ function playerShoot() {
     shakeIntensity = Math.min(0.08, shakeIntensity + 0.03);
   }
 
-  if (w.ammo === 0) startReload();
+  if (w.ammo === 0 && !isInfiniteAmmo) startReload();
 }
 
 function startReload() {
