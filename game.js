@@ -1,3 +1,8 @@
+// Admin State
+let isAdminUnlocked = false;
+let isGodMode = false;
+let isInfiniteAmmo = false;
+
 'use strict';
 /* ============================================================
    DEADZONE FPS Ã¢â‚¬â€ game.js
@@ -3443,7 +3448,7 @@ class BossSniper {
     // b) Cover bunker does NOT block line-of-fire
     if (playerToRayDist < 1.45 && playerDist < coverHitDist) {
       // 50 DAMAGE (2 shots = 100 HP = instant fatal death)
-      player.health = Math.max(0, player.health - this.damage);
+      if (!isGodMode) player.health = Math.max(0, player.health - this.damage);
       updateHealthHUD();
       triggerDamageFlash();
 
@@ -4400,6 +4405,7 @@ function setupInput() {
     keys[e.code] = true;
     if (gameState === 'playing') {
       if (e.code === 'KeyR') startReload();
+    if (e.code === 'Backquote' || e.code === 'F2') openAdminPanel();
       if (e.code === 'Digit1') switchWeapon(0);
       if (e.code === 'Digit2') switchWeapon(1);
       if (e.code === 'Digit3') switchWeapon(2);
@@ -5008,7 +5014,7 @@ function updateProjectiles(dt) {
 
     // Player hit (sphere vs camera position)
     if (p.mesh.position.distanceTo(camera.position) < 0.58) {
-      player.health = Math.max(0, player.health - p.damage);
+      if (!isGodMode) player.health = Math.max(0, player.health - p.damage);
       showDamageOverlay();
       updateHealthHUD();
       scene.remove(p.mesh);
@@ -6396,6 +6402,211 @@ function gameLoop() {
 // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 //  INITIALISATION
 // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+//  ADMIN PANEL SYSTEM
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function openAdminPanel() {
+  const modal = document.getElementById('admin-modal');
+  if (!modal) return;
+
+  if (!isMobile && isPointerLocked) {
+    document.exitPointerLock();
+  }
+
+  modal.classList.remove('hidden');
+  const lockView = document.getElementById('admin-lock-view');
+  const unlockedView = document.getElementById('admin-unlocked-view');
+  const errorMsg = document.getElementById('admin-error-msg');
+  const passInput = document.getElementById('admin-pass-input');
+
+  if (isAdminUnlocked) {
+    if (lockView) lockView.classList.add('hidden');
+    if (unlockedView) unlockedView.classList.remove('hidden');
+    const waveInp = document.getElementById('admin-wave-input');
+    if (waveInp) waveInp.value = wave;
+  } else {
+    if (lockView) lockView.classList.remove('hidden');
+    if (unlockedView) unlockedView.classList.add('hidden');
+    if (errorMsg) errorMsg.classList.add('hidden');
+    if (passInput) {
+      passInput.value = '';
+      setTimeout(() => passInput.focus(), 80);
+    }
+  }
+}
+
+function closeAdminPanel() {
+  const modal = document.getElementById('admin-modal');
+  if (modal) modal.classList.add('hidden');
+
+  if (gameState === 'playing' && !isMobile) {
+    document.getElementById('game-canvas').requestPointerLock();
+  }
+}
+
+function attemptAdminUnlock() {
+  const passInput = document.getElementById('admin-pass-input');
+  const errorMsg = document.getElementById('admin-error-msg');
+  const lockView = document.getElementById('admin-lock-view');
+  const unlockedView = document.getElementById('admin-unlocked-view');
+
+  if (!passInput) return;
+
+  if (passInput.value.trim() === 'Taheer') {
+    isAdminUnlocked = true;
+    if (errorMsg) errorMsg.classList.add('hidden');
+    if (lockView) lockView.classList.add('hidden');
+    if (unlockedView) unlockedView.classList.remove('hidden');
+    const waveInp = document.getElementById('admin-wave-input');
+    if (waveInp) waveInp.value = wave;
+    if (audioCtx) playLockOnBeep(1.8);
+  } else {
+    if (errorMsg) {
+      errorMsg.classList.remove('hidden');
+      passInput.select();
+    }
+  }
+}
+
+function adminJumpToWave(targetWave) {
+  targetWave = parseInt(targetWave, 10);
+  if (isNaN(targetWave) || targetWave < 1) targetWave = 1;
+
+  wave = targetWave;
+  closeAdminPanel();
+
+  // If game is in menu or paused, start/resume it
+  if (gameState === 'menu' || gameState === 'gameover') {
+    document.getElementById('main-menu').classList.remove('active');
+    document.getElementById('game-over').classList.add('hidden');
+    document.getElementById('game-container').classList.remove('hidden');
+    startGame();
+    wave = targetWave; // retain target wave
+    spawnWave();
+  } else if (gameState === 'paused') {
+    document.getElementById('pause-menu').classList.add('hidden');
+    gameState = 'playing';
+    spawnWave();
+  } else {
+    // Already playing or wavecomplete
+    document.getElementById('wave-complete').classList.add('hidden');
+    if (waveCountdownTimer) { clearInterval(waveCountdownTimer); waveCountdownTimer = null; }
+    gameState = 'playing';
+    spawnWave();
+  }
+
+  // Ensure full health & HUD update
+  player.health = player.maxHealth;
+  updateHealthHUD();
+
+  if (!isMobile) {
+    document.getElementById('game-canvas').requestPointerLock();
+  }
+}
+
+function setupAdminEventListeners() {
+  // Admin button in Main Menu
+  const adminMenuBtn = document.getElementById('admin-menu-btn');
+  if (adminMenuBtn) adminMenuBtn.addEventListener('click', openAdminPanel);
+
+  // Admin button in Pause Menu
+  const adminPauseBtn = document.getElementById('admin-pause-btn');
+  if (adminPauseBtn) adminPauseBtn.addEventListener('click', openAdminPanel);
+
+  // Close & Cancel buttons
+  const closeBtn = document.getElementById('admin-close-btn');
+  if (closeBtn) closeBtn.addEventListener('click', closeAdminPanel);
+
+  const doneBtn = document.getElementById('admin-done-btn');
+  if (doneBtn) doneBtn.addEventListener('click', closeAdminPanel);
+
+  // Unlock button & Enter key
+  const unlockBtn = document.getElementById('admin-unlock-btn');
+  if (unlockBtn) unlockBtn.addEventListener('click', attemptAdminUnlock);
+
+  const passInput = document.getElementById('admin-pass-input');
+  if (passInput) {
+    passInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') attemptAdminUnlock();
+    });
+  }
+
+  // Jump to wave button
+  const jumpBtn = document.getElementById('admin-jump-wave-btn');
+  if (jumpBtn) {
+    jumpBtn.addEventListener('click', () => {
+      const waveInp = document.getElementById('admin-wave-input');
+      if (waveInp) adminJumpToWave(waveInp.value);
+    });
+  }
+
+  // Quick wave buttons
+  document.querySelectorAll('.quick-wave-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.getAttribute('data-wave');
+      if (target) adminJumpToWave(target);
+    });
+  });
+
+  // Cheats: Restore HP
+  const healBtn = document.getElementById('admin-heal-btn');
+  if (healBtn) {
+    healBtn.addEventListener('click', () => {
+      player.health = player.maxHealth;
+      updateHealthHUD();
+      healBtn.classList.add('active');
+      setTimeout(() => healBtn.classList.remove('active'), 300);
+    });
+  }
+
+  // Cheats: Infinite Ammo
+  const ammoBtn = document.getElementById('admin-ammo-btn');
+  if (ammoBtn) {
+    ammoBtn.addEventListener('click', () => {
+      isInfiniteAmmo = !isInfiniteAmmo;
+      const statusSpan = document.getElementById('inf-ammo-status');
+      if (statusSpan) statusSpan.textContent = isInfiniteAmmo ? 'ON' : 'OFF';
+      if (isInfiniteAmmo) {
+        ammoBtn.classList.add('active');
+        weapons.forEach(w => { w.currentAmmo = w.magSize; w.reserveAmmo = 999; });
+        updateAmmoHUD();
+      } else {
+        ammoBtn.classList.remove('active');
+      }
+    });
+  }
+
+  // Cheats: God Mode
+  const godBtn = document.getElementById('admin-god-btn');
+  if (godBtn) {
+    godBtn.addEventListener('click', () => {
+      isGodMode = !isGodMode;
+      const statusSpan = document.getElementById('god-mode-status');
+      if (statusSpan) statusSpan.textContent = isGodMode ? 'ON' : 'OFF';
+      if (isGodMode) {
+        godBtn.classList.add('active');
+        player.health = player.maxHealth;
+        updateHealthHUD();
+      } else {
+        godBtn.classList.remove('active');
+      }
+    });
+  }
+
+  // Cheats: Nuke All Enemies
+  const killallBtn = document.getElementById('admin-killall-btn');
+  if (killallBtn) {
+    killallBtn.addEventListener('click', () => {
+      enemies.forEach(e => {
+        if (e.alive) e.takeDamage(99999);
+      });
+      killallBtn.classList.add('active');
+      setTimeout(() => killallBtn.classList.remove('active'), 300);
+    });
+  }
+}
+
 function init() {
   // Scene
   scene = new THREE.Scene();
@@ -6430,6 +6641,7 @@ function init() {
 
   // Input
   setupInput();
+  setupAdminEventListeners();
 
   // Resize handler
   window.addEventListener('resize', () => {

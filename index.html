@@ -63,6 +63,9 @@
         <button id="controls-btn" class="menu-btn" aria-label="View controls">
           <span class="btn-icon">⌨</span> CONTROLS
         </button>
+        <button id="admin-menu-btn" class="menu-btn admin-btn-style" aria-label="Admin panel">
+          <span class="btn-icon">⚡</span> ADMIN
+        </button>
       </nav>
       <div class="menu-footer" id="menu-footer-hint">WASD · MOUSE · CLICK TO SHOOT · R RELOAD · 1/2/3 SWITCH</div>
       <div class="menu-credit">made by Taheer</div>
@@ -256,8 +259,74 @@
       <div class="overlay-content">
         <h2 class="overlay-title">PAUSED</h2>
         <button id="resume-btn" class="menu-btn primary">▶ RESUME</button>
+        <button id="admin-pause-btn" class="menu-btn admin-btn-style">⚡ ADMIN PANEL</button>
         <button id="restart-btn" class="menu-btn">↺ RESTART</button>
         <button id="quit-btn" class="menu-btn">✕ QUIT TO MENU</button>
+      </div>
+    </div>
+
+    <!-- Admin Panel Modal -->
+    <div id="admin-modal" class="overlay-screen hidden" role="dialog" aria-label="Admin Control Panel">
+      <div class="overlay-content admin-card">
+        <div class="admin-header">
+          <div class="admin-badge">⚡ COMMAND ACCESS</div>
+          <h2 class="admin-title">ADMIN CONSOLE</h2>
+          <p class="admin-subtitle">WAVE DISPATCHER &amp; CHEAT OVERRIDES</p>
+        </div>
+
+        <!-- Locked Password View -->
+        <div id="admin-lock-view">
+          <div class="admin-input-group">
+            <label for="admin-pass-input">SECURITY PASSWORD REQUIRED</label>
+            <input type="password" id="admin-pass-input" placeholder="Enter password..." autocomplete="off" />
+          </div>
+          <div id="admin-error-msg" class="admin-error hidden">❌ Access Denied: Incorrect Password</div>
+          <div class="admin-btn-row">
+            <button id="admin-unlock-btn" class="menu-btn primary">🔓 UNLOCK ACCESS</button>
+            <button id="admin-close-btn" class="menu-btn">✕ CANCEL</button>
+          </div>
+        </div>
+
+        <!-- Unlocked Controls View -->
+        <div id="admin-unlocked-view" class="hidden">
+          <div class="admin-status-bar">
+            <span class="status-indicator">●</span> AUTHORIZED OPERATOR: <strong>TAHEER</strong>
+          </div>
+
+          <!-- Wave Selector Section -->
+          <div class="admin-section">
+            <div class="section-label">⚡ JUMP TO ANY WAVE</div>
+            <div class="wave-jump-controls">
+              <div class="wave-input-wrap">
+                <span>WAVE</span>
+                <input type="number" id="admin-wave-input" min="1" max="999" value="10" />
+              </div>
+              <button id="admin-jump-wave-btn" class="menu-btn primary glow-btn">🚀 LAUNCH WAVE</button>
+            </div>
+            <div class="quick-wave-buttons">
+              <button class="quick-wave-btn" data-wave="1">Wave 1 (Start)</button>
+              <button class="quick-wave-btn" data-wave="5">Wave 5 (AK-47s)</button>
+              <button class="quick-wave-btn boss-quick-btn" data-wave="10">💀 Wave 10 (SNIPER BOSS)</button>
+              <button class="quick-wave-btn" data-wave="15">Wave 15</button>
+              <button class="quick-wave-btn" data-wave="20">Wave 20</button>
+            </div>
+          </div>
+
+          <!-- Cheats & Perks Section -->
+          <div class="admin-section">
+            <div class="section-label">🛠 TACTICAL OVERRIDES</div>
+            <div class="admin-cheats-grid">
+              <button id="admin-heal-btn" class="admin-action-btn">❤️ RESTORE 100% HP</button>
+              <button id="admin-ammo-btn" class="admin-action-btn">🎯 INFINITE AMMO: <span id="inf-ammo-status">OFF</span></button>
+              <button id="admin-god-btn" class="admin-action-btn">🛡️ GOD MODE: <span id="god-mode-status">OFF</span></button>
+              <button id="admin-killall-btn" class="admin-action-btn">💥 NUKE ALL ENEMIES</button>
+            </div>
+          </div>
+
+          <div class="admin-btn-row">
+            <button id="admin-done-btn" class="menu-btn primary">✓ RESUME GAME</button>
+          </div>
+        </div>
       </div>
     </div>
 
