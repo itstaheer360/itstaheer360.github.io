@@ -6551,61 +6551,79 @@ function setupAdminEventListeners() {
 
   // Cheats: Restore HP
   const healBtn = document.getElementById('admin-heal-btn');
-  if (healBtn) {
-    healBtn.addEventListener('click', () => {
-      player.health = player.maxHealth;
-      updateHealthHUD();
-      healBtn.classList.add('active');
-      setTimeout(() => healBtn.classList.remove('active'), 300);
-    });
-  }
+  if (healBtn) healBtn.addEventListener('click', adminRestoreHP);
 
   // Cheats: Infinite Ammo
   const ammoBtn = document.getElementById('admin-ammo-btn');
-  if (ammoBtn) {
-    ammoBtn.addEventListener('click', () => {
-      isInfiniteAmmo = !isInfiniteAmmo;
-      const statusSpan = document.getElementById('inf-ammo-status');
-      if (statusSpan) statusSpan.textContent = isInfiniteAmmo ? 'ON' : 'OFF';
-      if (isInfiniteAmmo) {
-        ammoBtn.classList.add('active');
-        weapons.forEach(w => { w.currentAmmo = w.magSize; w.reserveAmmo = 999; });
-        updateAmmoHUD();
-      } else {
-        ammoBtn.classList.remove('active');
-      }
-    });
-  }
+  if (ammoBtn) ammoBtn.addEventListener('click', adminToggleInfiniteAmmo);
 
   // Cheats: God Mode
   const godBtn = document.getElementById('admin-god-btn');
-  if (godBtn) {
-    godBtn.addEventListener('click', () => {
-      isGodMode = !isGodMode;
-      const statusSpan = document.getElementById('god-mode-status');
-      if (statusSpan) statusSpan.textContent = isGodMode ? 'ON' : 'OFF';
-      if (isGodMode) {
-        godBtn.classList.add('active');
-        player.health = player.maxHealth;
-        updateHealthHUD();
-      } else {
-        godBtn.classList.remove('active');
-      }
-    });
-  }
+  if (godBtn) godBtn.addEventListener('click', adminToggleGodMode);
 
   // Cheats: Nuke All Enemies
   const killallBtn = document.getElementById('admin-killall-btn');
-  if (killallBtn) {
-    killallBtn.addEventListener('click', () => {
-      enemies.forEach(e => {
-        if (e.alive) e.takeDamage(99999);
-      });
-      killallBtn.classList.add('active');
-      setTimeout(() => killallBtn.classList.remove('active'), 300);
-    });
+  if (killallBtn) killallBtn.addEventListener('click', adminNukeAll);
+}
+
+function adminRestoreHP() {
+  player.health = player.maxHealth;
+  updateHealthHUD();
+  const healBtn = document.getElementById('admin-heal-btn');
+  if (healBtn) {
+    healBtn.classList.add('active');
+    setTimeout(() => healBtn.classList.remove('active'), 300);
   }
 }
+
+function adminToggleInfiniteAmmo() {
+  isInfiniteAmmo = !isInfiniteAmmo;
+  const statusSpan = document.getElementById('inf-ammo-status');
+  if (statusSpan) statusSpan.textContent = isInfiniteAmmo ? 'ON' : 'OFF';
+  const ammoBtn = document.getElementById('admin-ammo-btn');
+  if (isInfiniteAmmo) {
+    if (ammoBtn) ammoBtn.classList.add('active');
+    weapons.forEach(w => { w.currentAmmo = w.magSize; w.reserveAmmo = 999; });
+    updateAmmoHUD();
+  } else {
+    if (ammoBtn) ammoBtn.classList.remove('active');
+  }
+}
+
+function adminToggleGodMode() {
+  isGodMode = !isGodMode;
+  const statusSpan = document.getElementById('god-mode-status');
+  if (statusSpan) statusSpan.textContent = isGodMode ? 'ON' : 'OFF';
+  const godBtn = document.getElementById('admin-god-btn');
+  if (isGodMode) {
+    if (godBtn) godBtn.classList.add('active');
+    player.health = player.maxHealth;
+    updateHealthHUD();
+  } else {
+    if (godBtn) godBtn.classList.remove('active');
+  }
+}
+
+function adminNukeAll() {
+  enemies.forEach(e => {
+    if (e.alive) e.takeDamage(99999);
+  });
+  const killallBtn = document.getElementById('admin-killall-btn');
+  if (killallBtn) {
+    killallBtn.classList.add('active');
+    setTimeout(() => killallBtn.classList.remove('active'), 300);
+  }
+}
+
+// Global window bindings
+window.openAdminPanel = openAdminPanel;
+window.closeAdminPanel = closeAdminPanel;
+window.attemptAdminUnlock = attemptAdminUnlock;
+window.adminJumpToWave = adminJumpToWave;
+window.adminRestoreHP = adminRestoreHP;
+window.adminToggleInfiniteAmmo = adminToggleInfiniteAmmo;
+window.adminToggleGodMode = adminToggleGodMode;
+window.adminNukeAll = adminNukeAll;
 
 function init() {
   // Scene

@@ -1260,9 +1260,10 @@ kbd {
   }
 }
 
-/* ═══════════════════════════════════════════════
-   ADMIN CONSOLE PANEL
-═══════════════════════════════════════════════ */
+#admin-modal {
+  z-index: 5000 !important;
+}
+
 .admin-btn-style {
   border-color: rgba(0, 255, 170, 0.4) !important;
   color: #00ffaa !important;
