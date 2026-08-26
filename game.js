@@ -3528,10 +3528,11 @@ function playerShoot() {
 
       // Damage calculation
       let dmg = w.damage;
-      const isCloseShotgun = isShotgun && targetDist < 7.5;
+      const isPointBlankShotgun = isShotgun && targetDist <= 4.2;
 
       if (isHeadshot && isShotgun) {
-        dmg = isCloseShotgun ? 9999 : (dmg + 30);
+        // Point-blank shotgun headshot is catastrophic instakill
+        dmg = isPointBlankShotgun ? 9999 : (dmg + 25);
       } else if (isHeadshot) {
         if (w.id === 'sniper') {
           dmg = 9999; // Sniper is lethal headshot kill with head intact
@@ -3544,9 +3545,10 @@ function playerShoot() {
         dmg += Math.floor(Math.random() * (isShotgun ? 5 : 18));
       }
 
-      // ONLY THE SHOTGUN CAN DECAPITATE A HEAD (realistic gore mechanics)
-      const canDecapitate = isHeadshot && isShotgun;
-      if (canDecapitate && (isCloseShotgun || hitEnemy.hp <= dmg) && !hitEnemy.headDestroyed) {
+      // ONLY POINT-BLANK / CLOSE-RANGE SHOTGUN HEADSHOTS CAN DECAPITATE (< 4.2m)
+      // At mid or long range, scattered pellets will kill low-health enemies with head intact.
+      const canDecapitate = isHeadshot && isShotgun && isPointBlankShotgun;
+      if (canDecapitate && !hitEnemy.headDestroyed) {
         hitEnemy.explodeHead(shotDir, enemyHitPoint);
       }
       hitEnemy.takeDamage(dmg, canDecapitate, shotDir, enemyHitPoint);
