@@ -96,8 +96,8 @@ html, body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 36px;
-  padding: 60px 48px;
+  gap: 20px;
+  padding: 36px 36px;
   background: var(--bg-panel);
   border: 1px solid rgba(255, 30, 60, 0.25);
   border-top: 2px solid var(--accent);
@@ -106,7 +106,9 @@ html, body {
     0 0 60px rgba(255, 30, 60, 0.12),
     0 0 120px rgba(0, 0, 0, 0.8),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  min-width: 340px;
+  min-width: 320px;
+  max-width: 480px;
+  width: 90vw;
 }
 
 /* ── Title ── */
@@ -119,7 +121,7 @@ html, body {
   position: absolute;
   inset: 0;
   font-family: var(--font-title);
-  font-size: 5rem;
+  font-size: 3.6rem;
   font-weight: 900;
   color: transparent;
   text-shadow: 0 0 40px rgba(255, 30, 60, 0.6), 0 0 80px rgba(255, 30, 60, 0.3);
@@ -135,7 +137,7 @@ html, body {
 
 .game-title {
   font-family: var(--font-title);
-  font-size: 5rem;
+  font-size: 3.6rem;
   font-weight: 900;
   letter-spacing: 0.18em;
   color: var(--text-main);
@@ -148,21 +150,21 @@ html, body {
 
 .game-subtitle {
   font-family: var(--font-hud);
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   font-weight: 600;
-  letter-spacing: 0.35em;
+  letter-spacing: 0.3em;
   color: var(--accent);
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 .version-tag {
   display: inline-block;
-  margin-top: 12px;
-  padding: 3px 12px;
+  margin-top: 8px;
+  padding: 2px 10px;
   font-family: var(--font-hud);
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 700;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.18em;
   color: var(--accent2);
   background: rgba(0, 229, 255, 0.08);
   border: 1px solid rgba(0, 229, 255, 0.35);
@@ -173,34 +175,34 @@ html, body {
 
 /* ── Loadout Menu ── */
 .loadout-section {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
   width: 100%;
-  margin: 10px 0;
+  margin: 4px 0;
 }
 
 .loadout-item {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .loadout-item label {
   font-family: var(--font-title);
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   font-weight: 700;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.12em;
   color: var(--text-dim);
 }
 
 .weapon-select {
   width: 100%;
-  padding: 10px 14px;
+  padding: 7px 8px;
   font-family: var(--font-title);
-  font-size: 0.85rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.05em;
   color: var(--text-main);
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.15);
@@ -210,9 +212,10 @@ html, body {
   appearance: none; /* Hide default dropdown arrow */
   background-image: linear-gradient(45deg, transparent 50%, var(--accent) 50%),
                     linear-gradient(135deg, var(--accent) 50%, transparent 50%);
-  background-position: calc(100% - 20px) calc(1em + 2px), calc(100% - 15px) calc(1em + 2px);
-  background-size: 5px 5px, 5px 5px;
+  background-position: calc(100% - 14px) calc(1em + 1px), calc(100% - 9px) calc(1em + 1px);
+  background-size: 4px 4px, 4px 4px;
   background-repeat: no-repeat;
+  border-radius: 2px;
 }
 
 .weapon-select:hover, .weapon-select:focus {
@@ -223,22 +226,22 @@ html, body {
 .weapon-select option {
   background: var(--bg-panel);
   color: var(--text-main);
-  padding: 10px;
+  padding: 8px;
 }
 
 /* ── Buttons ── */
 .menu-buttons {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
   width: 100%;
 }
 
 .menu-btn {
   width: 100%;
-  padding: 14px 28px;
+  padding: 11px 22px;
   font-family: var(--font-title);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.12em;
   color: var(--text-main);
@@ -248,7 +251,7 @@ html, body {
   transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
-  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
 }
 
 .menu-btn::before {
@@ -311,25 +314,34 @@ html, body {
 /* ── Controls Screen ── */
 .screen-title {
   font-family: var(--font-title);
-  font-size: 1.6rem;
+  font-size: 1.4rem;
   font-weight: 700;
   letter-spacing: 0.2em;
   color: var(--accent);
   text-align: center;
 }
 
+.controls-group-label {
+  font-family: var(--font-title);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: var(--accent);
+  margin-top: 4px;
+}
+
 .controls-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px 28px;
+  gap: 8px 18px;
   width: 100%;
 }
 
 .ctrl-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 0.9rem;
+  gap: 10px;
+  font-size: 0.82rem;
   font-weight: 600;
   color: var(--text-dim);
 }
@@ -338,13 +350,14 @@ html, body {
 
 kbd {
   font-family: var(--font-title);
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   font-weight: 700;
   letter-spacing: 0.05em;
   color: var(--accent2);
   background: rgba(0, 229, 255, 0.08);
   border: 1px solid rgba(0, 229, 255, 0.3);
-  padding: 4px 8px;
+  padding: 3px 6px;
+  border-radius: 2px;
   white-space: nowrap;
 }
 
@@ -454,44 +467,46 @@ kbd {
   top: 0; left: 0; right: 0;
   display: flex;
   justify-content: space-between;
-  padding: 18px 24px;
+  padding: 12px 18px;
 }
 
 #wave-display,
 #kill-count {
   font-family: var(--font-title);
-  font-size: 0.78rem;
+  font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.15em;
   color: var(--text-main);
   background: var(--bg-panel);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-top: 2px solid var(--accent);
-  padding: 8px 16px;
+  padding: 5px 12px;
   backdrop-filter: blur(8px);
+  border-radius: 2px;
 }
 
 #wave-display span,
 #kill-count span {
   color: var(--accent);
-  font-size: 1rem;
+  font-size: 0.88rem;
 }
 
 /* ── Enemy Counter ── */
 #enemy-counter {
   position: absolute;
-  top: 70px;
+  top: 50px;
   left: 50%;
   transform: translateX(-50%);
   font-family: var(--font-title);
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   font-weight: 700;
   letter-spacing: 0.18em;
   color: var(--text-dim);
   background: var(--bg-panel);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  padding: 5px 14px;
+  padding: 4px 10px;
   backdrop-filter: blur(6px);
+  border-radius: 2px;
 }
 
 #enemy-counter span { color: #ff8800; }
@@ -499,20 +514,21 @@ kbd {
 /* ── Boss Health Bar ── */
 #boss-hud {
   position: absolute;
-  top: 68px;
+  top: 48px;
   left: 50%;
   transform: translateX(-50%);
-  width: min(520px, 90vw);
+  width: min(440px, 88vw);
   background: rgba(12, 3, 8, 0.92);
   border: 1px solid rgba(255, 30, 60, 0.4);
   box-shadow: 0 0 25px rgba(255, 0, 50, 0.35), inset 0 0 15px rgba(255, 0, 50, 0.15);
-  padding: 10px 16px;
+  padding: 8px 14px;
   backdrop-filter: blur(10px);
   z-index: 20;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
   animation: bossHudIntro 0.5s ease-out;
+  border-radius: 2px;
 }
 
 @keyframes bossHudIntro {
@@ -525,14 +541,14 @@ kbd {
   justify-content: space-between;
   align-items: center;
   font-family: var(--font-title);
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   letter-spacing: 0.15em;
   font-weight: 700;
 }
 
 .boss-warning-icon {
   color: #ff2244;
-  font-size: 1rem;
+  font-size: 0.9rem;
   animation: bossPulseIcon 1s infinite alternate;
 }
 
@@ -549,12 +565,12 @@ kbd {
 
 .boss-hp-num {
   color: var(--text-dim);
-  font-size: 0.75rem;
+  font-size: 0.7rem;
 }
 
 .boss-bar-frame {
   width: 100%;
-  height: 10px;
+  height: 8px;
   background: rgba(0, 0, 0, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 2px;
@@ -573,7 +589,7 @@ kbd {
 /* ── Laser Lock Warning Overlay ── */
 #laser-lock-warning {
   position: absolute;
-  top: 130px;
+  top: 100px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 25;
@@ -587,19 +603,19 @@ kbd {
   color: #ffffff;
   font-family: var(--font-title);
   font-weight: 900;
-  font-size: 0.85rem;
-  letter-spacing: 0.2em;
-  padding: 8px 24px;
-  border-radius: 4px;
+  font-size: 0.78rem;
+  letter-spacing: 0.18em;
+  padding: 6px 18px;
+  border-radius: 3px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   animation: laserLockFlash 0.22s infinite alternate;
 }
 
 .laser-flash-dot {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background: #ffffff;
   box-shadow: 0 0 10px #ffffff;
@@ -617,8 +633,8 @@ kbd {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  padding: 0 24px 24px;
-  gap: 20px;
+  padding: 0 18px 18px;
+  gap: 16px;
 }
 
 #health-section,
@@ -626,41 +642,42 @@ kbd {
   background: var(--bg-panel);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-bottom: 2px solid var(--accent);
-  padding: 12px 18px;
+  padding: 8px 14px;
   backdrop-filter: blur(8px);
-  min-width: 180px;
+  min-width: 140px;
+  border-radius: 2px;
 }
 
 .hud-label {
   font-family: var(--font-title);
-  font-size: 0.6rem;
+  font-size: 0.56rem;
   font-weight: 700;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.18em;
   color: var(--text-dim);
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 /* Health Bar */
 #health-bar-bg {
-  width: 160px;
-  height: 6px;
+  width: 130px;
+  height: 5px;
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
+  border-radius: 2px;
   overflow: hidden;
-  margin-bottom: 5px;
+  margin-bottom: 4px;
 }
 
 #health-bar {
   height: 100%;
   width: 100%;
   background: linear-gradient(90deg, var(--green-hp), #00cc66);
-  border-radius: 3px;
+  border-radius: 2px;
   transition: width 0.2s ease, background 0.4s ease;
 }
 
 #health-text {
   font-family: var(--font-title);
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 900;
   color: var(--text-main);
   line-height: 1;
@@ -669,22 +686,23 @@ kbd {
 /* Weapon Slots */
 #weapon-slots {
   display: flex;
-  gap: 6px;
-  margin-bottom: 6px;
+  gap: 4px;
+  margin-bottom: 4px;
 }
 
 .weapon-slot {
   font-family: var(--font-title);
-  font-size: 0.58rem;
+  font-size: 0.55rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   color: var(--text-dim);
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 3px 7px;
+  padding: 2px 6px;
   cursor: default;
   transition: all 0.15s ease;
   white-space: nowrap;
+  border-radius: 2px;
 }
 
 .weapon-slot.active {
@@ -696,37 +714,37 @@ kbd {
 
 #weapon-name {
   font-family: var(--font-title);
-  font-size: 0.7rem;
+  font-size: 0.62rem;
   font-weight: 700;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.15em;
   color: var(--accent2);
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 /* Ammo */
 #ammo-display {
   display: flex;
   align-items: baseline;
-  gap: 4px;
+  gap: 3px;
   line-height: 1;
 }
 
 #ammo-current {
   font-family: var(--font-title);
-  font-size: 2rem;
+  font-size: 1.5rem;
   font-weight: 900;
   color: var(--text-main);
 }
 
 .ammo-sep {
   font-family: var(--font-title);
-  font-size: 1.2rem;
+  font-size: 1rem;
   color: var(--text-dim);
 }
 
 #ammo-reserve {
   font-family: var(--font-title);
-  font-size: 1rem;
+  font-size: 0.85rem;
   color: var(--text-dim);
 }
 
@@ -843,24 +861,25 @@ kbd {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
-  padding: 48px 52px;
+  gap: 16px;
+  padding: 32px 36px;
   background: var(--bg-panel);
   border: 1px solid rgba(255, 30, 60, 0.25);
   border-top: 2px solid var(--accent);
   box-shadow: 0 0 60px rgba(255, 30, 60, 0.15), 0 0 120px rgba(0, 0, 0, 0.9);
-  min-width: 320px;
+  min-width: 280px;
+  max-width: 420px;
   text-align: center;
 }
 
 .overlay-content.compact {
-  padding: 36px 44px;
-  gap: 12px;
+  padding: 24px 30px;
+  gap: 10px;
 }
 
 .overlay-title {
   font-family: var(--font-title);
-  font-size: 2.2rem;
+  font-size: 1.8rem;
   font-weight: 900;
   letter-spacing: 0.18em;
   color: var(--text-main);
@@ -870,7 +889,7 @@ kbd {
 .overlay-title.death-title { color: var(--accent);   text-shadow: 0 0 20px rgba(255, 30, 60, 0.5); }
 
 .overlay-sub {
-  font-size: 0.92rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: var(--text-dim);
   letter-spacing: 0.05em;
@@ -878,7 +897,7 @@ kbd {
 
 .next-wave-line {
   font-family: var(--font-title);
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   color: var(--text-dim);
@@ -886,17 +905,17 @@ kbd {
 
 .next-wave-line span {
   color: var(--accent2);
-  font-size: 1.4rem;
+  font-size: 1.2rem;
 }
 
 .bonus-label {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.18em;
   color: var(--green-hp);
   background: rgba(0, 255, 136, 0.07);
   border: 1px solid rgba(0, 255, 136, 0.2);
-  padding: 6px 16px;
+  padding: 5px 14px;
 }
 
 /* ── Click to Start ── */
@@ -904,7 +923,7 @@ kbd {
 
 .click-text {
   font-family: var(--font-title);
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   font-weight: 700;
   letter-spacing: 0.25em;
   color: var(--text-main);
@@ -917,18 +936,18 @@ kbd {
 }
 
 .click-sub {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   letter-spacing: 0.12em;
   color: var(--text-dim);
 }
 
 .pulse-ring {
-  width: 60px;
-  height: 60px;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   border: 2px solid var(--accent);
   animation: pulseRing 1.6s ease-out infinite;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 @keyframes pulseRing {
@@ -940,23 +959,24 @@ kbd {
 .stats-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  gap: 12px;
   width: 100%;
-  margin: 6px 0;
+  margin: 4px 0;
 }
 
 .stat-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.07);
-  padding: 14px;
+  padding: 10px 14px;
+  border-radius: 2px;
 }
 
 .stat-label {
-  font-size: 0.6rem;
+  font-size: 0.58rem;
   font-weight: 700;
   letter-spacing: 0.18em;
   color: var(--text-dim);
@@ -964,7 +984,7 @@ kbd {
 
 .stat-value {
   font-family: var(--font-title);
-  font-size: 2.4rem;
+  font-size: 1.8rem;
   font-weight: 900;
   color: var(--accent);
 }
@@ -1197,31 +1217,36 @@ kbd {
 ═══════════════════════════════════════════════════════ */
 @media (max-width: 600px) {
   .menu-content {
-    padding: 36px 24px;
-    gap: 24px;
+    padding: 24px 20px;
+    gap: 16px;
     min-width: 0;
-    width: 92vw;
+    width: 94vw;
     max-width: 360px;
   }
 
   .game-title,
   .title-glow {
-    font-size: 3rem;
+    font-size: 2.6rem;
   }
 
-  #hud-top { padding: 10px 14px; }
-  #wave-display, #kill-count { font-size: 0.7rem; padding: 6px 10px; }
+  .loadout-section {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
 
-  #hud-bottom { padding: 0 12px 80px; gap: 10px; }
-  #health-section, #ammo-section { min-width: 120px; padding: 8px 10px; }
-  #health-bar-bg { width: 100%; }
-  #health-text { font-size: 1.1rem; }
-  #ammo-current { font-size: 1.4rem; }
-  #weapon-name { font-size: 0.58rem; }
+  #hud-top { padding: 8px 12px; }
+  #wave-display, #kill-count { font-size: 0.65rem; padding: 4px 8px; }
 
-  #enemy-counter { top: 55px; }
+  #hud-bottom { padding: 0 10px 75px; gap: 8px; }
+  #health-section, #ammo-section { min-width: 110px; padding: 6px 8px; }
+  #health-bar-bg { width: 100%; height: 4px; }
+  #health-text { font-size: 1rem; }
+  #ammo-current { font-size: 1.25rem; }
+  #weapon-name { font-size: 0.55rem; }
 
-  .controls-grid { grid-template-columns: 1fr; gap: 8px 0; }
+  #enemy-counter { top: 44px; padding: 3px 8px; font-size: 0.6rem; }
+
+  .controls-grid { grid-template-columns: 1fr; gap: 6px 0; }
 }
 
 @media (max-height: 500px) and (orientation: landscape) {
