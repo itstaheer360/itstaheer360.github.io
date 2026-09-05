@@ -46,6 +46,7 @@ const levelMeshes = [];
 
 /** Currently selected map id ('deadzone' | 'warfront') */
 let selectedMap = 'deadzone';
+let isBossArenaActive = false;
 
 // Input
 const keys = {};
@@ -1616,35 +1617,61 @@ function createBossArena(mapId) {
   box(-HALF, WALL_H / 2, 0, 1, WALL_H, HALF * 2, wallMat);
   box(HALF, WALL_H / 2, 0, 1, WALL_H, HALF * 2, wallMat);
 
-  // 3. High Ground: Elevated Sniper Watchtower Nest in the Far Corner (X: 28, Z: -28)
+  // 3. High Ground: Open Elevated Sniper Watchtower Nest in Far Corner (X: 28, Z: -28)
   const tx = 28, tz = -28;
-  // Main concrete tower pillar base
-  box(tx, 2.2, tz, 5.0, 4.4, 5.0, concMat);
-  // High floor platform at Y = 4.4
-  box(tx, 4.4, tz, 7.8, 0.4, 7.8, darkMetal);
-  // High parapet walls / sniper rifle rest along the front and sides
-  box(tx, 5.05, tz + 3.6, 7.8, 0.9, 0.5, concMat); // Front ledge
-  box(tx - 3.6, 5.05, tz, 0.5, 0.9, 7.8, concMat); // Left ledge
-  box(tx + 3.6, 5.05, tz, 0.5, 0.9, 7.8, concMat); // Right ledge
-  box(tx, 5.05, tz - 3.6, 7.8, 0.9, 0.5, concMat); // Back ledge
-  // Sandbags along front sniper ledge
-  box(tx, 4.85, tz + 3.2, 5.5, 0.5, 0.7, rustMat);
+  // Main concrete tower pillar base (only this ground base is collidable to prevent walking through)
+  box(tx, 2.0, tz, 4.8, 4.0, 4.8, concMat);
+
+  // Helper: purely visual architectural meshes (NOT added to collidables so they NEVER block player shots at boss)
+  function decoBox(x, y, z, w, h, d, mat) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    m.position.set(x, y, z);
+    m.castShadow = true;
+    m.receiveShadow = true;
+    scene.add(m);
+    levelMeshes.push(m);
+    return m;
+  }
+
+  // High floor platform at Y = 4.15 (surface at Y = 4.25)
+  decoBox(tx, 4.15, tz, 6.4, 0.25, 6.4, darkMetal);
+
+  // 4 corner industrial steel support columns (Y = 4.25 to 6.85, height 2.6)
+  decoBox(tx - 2.8, 5.55, tz - 2.8, 0.16, 2.6, 0.16, darkMetal);
+  decoBox(tx + 2.8, 5.55, tz - 2.8, 0.16, 2.6, 0.16, darkMetal);
+  decoBox(tx + 2.8, 5.55, tz + 2.8, 0.16, 2.6, 0.16, darkMetal);
+  decoBox(tx - 2.8, 5.55, tz + 2.8, 0.16, 2.6, 0.16, darkMetal);
+
+  // Overhead protective steel watchtower roof canopy
+  decoBox(tx, 6.95, tz, 6.8, 0.2, 6.8, darkMetal);
+
+  // Red beacon light fixture on top of roof canopy
+  decoBox(tx, 7.22, tz, 0.5, 0.35, 0.5, rustMat);
+
+  // Open rear safety railings (Northeast outer map walls)
+  decoBox(tx, 4.65, tz - 3.0, 6.0, 0.6, 0.08, darkMetal);
+  decoBox(tx + 3.0, 4.65, tz, 0.08, 0.6, 6.0, darkMetal);
+
+  // Low sandbag sniper mount at forward Southwest corner overlooking arena
+  // Height only 0.42m above floor so the Boss upper body, rifle & head are 100% visible!
+  decoBox(tx - 1.4, 4.46, tz + 2.8, 3.2, 0.42, 0.55, rustMat);
+  decoBox(tx - 2.8, 4.46, tz - 1.4, 0.55, 0.42, 3.2, rustMat);
 
   // 4. EXACTLY 3 STRATEGIC HIDING SPOTS (Full-Cover Reinforced Concrete Bunkers)
-  // â”€â”€ Hiding Spot 1: Left Heavy Bunker â”€â”€
+  // ── Hiding Spot 1: Left Heavy Bunker ──
   const b1x = -15, b1z = -5;
   box(b1x, 1.4, b1z, 5.8, 2.8, 1.4, concMat); // Front barrier
   box(b1x - 2.5, 1.4, b1z + 1.8, 1.4, 2.8, 4.2, concMat); // Side wing
   box(b1x + 0.6, 0.4, b1z + 1.2, 3.6, 0.8, 0.8, rustMat); // Sandbag base
 
-  // â”€â”€ Hiding Spot 2: Center Reinforced Defense Wall â”€â”€
+  // ── Hiding Spot 2: Center Reinforced Defense Wall ──
   const b2x = 0, b2z = 7;
   box(b2x, 1.4, b2z, 7.2, 2.8, 1.6, concMat); // Central main barrier
   box(b2x - 3.2, 1.4, b2z - 1.6, 1.4, 2.8, 3.8, concMat); // Left return wing
   box(b2x + 3.2, 1.4, b2z - 1.6, 1.4, 2.8, 3.8, concMat); // Right return wing
   box(b2x, 0.45, b2z - 1.2, 4.5, 0.9, 0.9, rustMat); // Sandbags
 
-  // â”€â”€ Hiding Spot 3: Right Heavy Bunker â”€â”€
+  // ── Hiding Spot 3: Right Heavy Bunker ──
   const b3x = 16, b3z = 2;
   box(b3x, 1.4, b3z, 5.8, 2.8, 1.4, concMat); // Front barrier
   box(b3x + 2.5, 1.4, b3z - 1.8, 1.4, 2.8, 4.2, concMat); // Side wing
@@ -1657,19 +1684,47 @@ function createBossArena(mapId) {
   dir.position.set(-20, 25, 15);
   scene.add(dir); levelMeshes.push(dir);
 
-  // Red beacon warning light on sniper tower
-  addPointLight(tx, 6.0, tz, 0xff0022, 4.5, 25);
+  // Red beacon warning light on sniper tower roof
+  addPointLight(tx, 7.6, tz, 0xff0022, 5.0, 30);
   addPointLight(b1x, 2.5, b1z, 0xffaa44, 1.5, 14);
   addPointLight(b2x, 2.5, b2z, 0xffaa44, 1.5, 14);
   addPointLight(b3x, 2.5, b3z, 0xffaa44, 1.5, 14);
 }
 
-// â”€â”€ Dispatcher: build the right level based on map id
+function clearCurrentLevel() {
+  levelMeshes.forEach(m => scene.remove(m));
+  levelMeshes.length = 0;
+  collidables.length = 0;
+  vehicleColliders.length = 0;
+}
+
+function ensureCorrectLevelForWave(targetWave) {
+  if (targetWave === 10) {
+    if (!isBossArenaActive) {
+      clearCurrentLevel();
+      createBossArena(selectedMap);
+      isBossArenaActive = true;
+    }
+  } else {
+    if (isBossArenaActive) {
+      clearCurrentLevel();
+      createLevel(selectedMap);
+      isBossArenaActive = false;
+      camera.position.set(0, player.eyeHeight, 5);
+      player.yaw = 0;
+      player.pitch = 0;
+    }
+  }
+}
+
+// ── Dispatcher: build the right level based on map id
 function createLevel(mapId) {
   if (wave === 10) {
     createBossArena(mapId);
+    isBossArenaActive = true;
     return;
   }
+  isBossArenaActive = false;
   if (mapId === 'warfront') {
     // Warfront atmosphere
     scene.background = new THREE.Color(0xc8803a);
@@ -3174,11 +3229,9 @@ class Enemy {
   }
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ────────────────────────────────────────────────────────────
 //  WAVE 10 APEX SNIPER BOSS CLASS
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ────────────────────────────────────────────────────────────
 class BossSniper {
   constructor(x, y, z) {
     this.type = 'boss_sniper';
@@ -3186,9 +3239,9 @@ class BossSniper {
     this.hp = 1800;
     this.maxHp = 1800;
     this.alive = true;
-    this.damage = 50; // 2 shots = 100 HP instant death
+    this.damage = 50; // 2 direct hits = lethal fatal damage
 
-    // State machine: tracking (2.2s) -> locking (1.0s flash/beep) -> firing -> cooldown (2.6s)
+    // State machine: tracking (2.2s) -> locking (1.0s flash/beep) -> firing -> cooldown (2.4s)
     this.state = 'tracking';
     this.stateTimer = 2.2;
     this.beepTimer = 0;
@@ -3208,104 +3261,119 @@ class BossSniper {
     this.group = new THREE.Group();
     this.group.position.set(x, y, z);
 
-    // Prone materials
-    const zombieSkin = new THREE.MeshLambertMaterial({ color: 0x224822 });
-    const clothesMat = new THREE.MeshLambertMaterial({ color: 0x181e18 });
+    // Sniper boss tactical materials
+    const zombieSkin = new THREE.MeshLambertMaterial({ color: 0x2e502e });
+    const clothesMat = new THREE.MeshLambertMaterial({ color: 0x182018 });
+    const vestMat = new THREE.MeshLambertMaterial({ color: 0x111611 });
     const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0022 });
-    const gunDark = new THREE.MeshLambertMaterial({ color: 0x111113 });
-    const metalMat = new THREE.MeshLambertMaterial({ color: 0x2c3038 });
+    const gunDark = new THREE.MeshLambertMaterial({ color: 0x141416 });
+    const metalMat = new THREE.MeshLambertMaterial({ color: 0x30353c });
     const lensMat = new THREE.MeshBasicMaterial({ color: 0x00e1ff });
 
-    // 1. Prone Body: Torso flat on platform
-    this.torso = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.32, 1.15), clothesMat);
-    this.torso.position.set(0, 0.16, 0.4);
+    // 1. Elevated Combat Crouch Body: Torso raised above the low sandbag ledge
+    this.torso = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.72, 0.55), clothesMat);
+    this.torso.position.set(0, 0.48, 0.15);
     this.torso.castShadow = true;
     this.group.add(this.torso);
 
-    // 2. Prone Legs extending backwards
-    [-0.20, 0.20].forEach(lx => {
-      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.22, 0.95), clothesMat);
-      leg.position.set(lx, 0.11, 1.35);
+    // Heavy tactical armor vest plate
+    const vest = new THREE.Mesh(new THREE.BoxGeometry(0.88, 0.58, 0.58), vestMat);
+    vest.position.set(0, 0.48, 0.15);
+    this.group.add(vest);
+
+    // 2. Kneeling / Crouched Legs firmly planted on the elevated watchtower floor
+    [-0.26, 0.26].forEach(lx => {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.42, 0.72), clothesMat);
+      leg.position.set(lx, 0.20, 0.42);
+      leg.rotation.x = -0.35;
       this.group.add(leg);
     });
 
-    // 3. Prone Arms resting forward on sandbags holding sniper
-    [-0.30, 0.30].forEach((ax, idx) => {
-      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 0.85), clothesMat);
-      arm.position.set(ax, 0.12, -0.25);
-      arm.rotation.y = idx === 0 ? 0.2 : -0.2;
+    // 3. Arms reaching forward over the sandbag mount resting on the rifle stock
+    [-0.34, 0.34].forEach((ax, idx) => {
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.22, 0.75), clothesMat);
+      arm.position.set(ax, 0.45, -0.2);
+      arm.rotation.y = idx === 0 ? 0.25 : -0.25;
+      arm.rotation.x = 0.15;
       this.group.add(arm);
     });
 
-    // 4. Head raised slightly looking down into arena
-    this.head = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.42, 0.44), zombieSkin);
-    this.head.position.set(0, 0.38, -0.32);
-    this.head.rotation.x = 0.18;
+    // 4. Elevated Head looking down into the arena (clearly visible from the ground)
+    this.head = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.48, 0.48), zombieSkin);
+    this.head.position.set(0, 0.98, 0.05);
+    this.head.rotation.x = 0.22;
     this.group.add(this.head);
 
-    // Glowing Red Eyes
-    [-0.10, 0.10].forEach(ex => {
-      const eye = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.05, 0.06), eyeMat);
-      eye.position.set(ex, 0.04, -0.23);
+    // Glowing Menacing Red Optics / Eyes (piercing red glare visible at distance)
+    [-0.12, 0.12].forEach(ex => {
+      const eye = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.07, 0.10), eyeMat);
+      eye.position.set(ex, 0.05, -0.24);
       this.head.add(eye);
     });
 
-    // 5. Heavy .50 Cal Sniper Rifle Group mounted on sandbags
+    // 5. Heavy .50 Cal Sniper Rifle Group resting forward on sandbag ledge
     this.gunPivot = new THREE.Group();
-    this.gunPivot.position.set(0, 0.32, -0.45);
+    this.gunPivot.position.set(0, 0.52, -0.35);
 
     // Rifle Receiver & Stock
-    const receiver = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.20, 0.75), gunDark);
+    const receiver = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.22, 0.85), gunDark);
     receiver.position.set(0, 0, 0);
     this.gunPivot.add(receiver);
 
-    const stock = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.24, 0.55), metalMat);
-    stock.position.set(0, -0.04, 0.55);
+    const stock = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.26, 0.6), metalMat);
+    stock.position.set(0, -0.04, 0.6);
     this.gunPivot.add(stock);
 
-    // Massive .50 Cal Barrel (3.2m long)
-    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 3.2, 12), metalMat);
+    // Massive .50 Cal Fluted Barrel (3.4m long)
+    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.065, 3.4, 12), metalMat);
     barrel.rotation.x = Math.PI / 2;
-    barrel.position.set(0, 0.02, -1.8);
+    barrel.position.set(0, 0.02, -1.9);
     this.gunPivot.add(barrel);
 
     // Heavy Muzzle Brake
-    const muzzleBrake = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.12, 0.35), gunDark);
-    muzzleBrake.position.set(0, 0.02, -3.45);
+    const muzzleBrake = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.14, 0.38), gunDark);
+    muzzleBrake.position.set(0, 0.02, -3.65);
     this.gunPivot.add(muzzleBrake);
 
     // High-Magnification Sniper Scope
-    const scopeTube = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.65, 12), gunDark);
+    const scopeTube = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.065, 0.7, 12), gunDark);
     scopeTube.rotation.x = Math.PI / 2;
-    scopeTube.position.set(0, 0.18, -0.1);
+    scopeTube.position.set(0, 0.20, -0.15);
     this.gunPivot.add(scopeTube);
 
-    const scopeLens = new THREE.Mesh(new THREE.CircleGeometry(0.055, 12), lensMat);
-    scopeLens.position.set(0, 0.18, -0.43);
+    const scopeLens = new THREE.Mesh(new THREE.CircleGeometry(0.06, 12), lensMat);
+    scopeLens.position.set(0, 0.20, -0.51);
     scopeLens.rotation.y = Math.PI;
     this.gunPivot.add(scopeLens);
 
-    // Bipod legs planted down
-    [-0.22, 0.22].forEach(bx => {
-      const bipod = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.45, 6), metalMat);
+    // Heavy Bipod Stand planted on sandbags
+    [-0.24, 0.24].forEach(bx => {
+      const bipod = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.45, 6), metalMat);
       bipod.position.set(bx, -0.16, -1.2);
-      bipod.rotation.z = bx > 0 ? -0.35 : 0.35;
+      bipod.rotation.z = bx > 0 ? -0.3 : 0.3;
       bipod.rotation.x = 0.2;
       this.gunPivot.add(bipod);
     });
 
-    // Barrel tip anchor point
+    // Barrel tip anchor point for shots and laser beam
     this.muzzleTip = new THREE.Object3D();
-    this.muzzleTip.position.set(0, 0.02, -3.65);
+    this.muzzleTip.position.set(0, 0.02, -3.85);
     this.gunPivot.add(this.muzzleTip);
 
     this.group.add(this.gunPivot);
+
+    // 6. Generous invisible Hitbox volume covering boss body and head so incoming bullets register easily
+    const hitBoxMat = new THREE.MeshBasicMaterial({ visible: false });
+    this.hitboxMesh = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.8, 1.6), hitBoxMat);
+    this.hitboxMesh.position.set(0, 0.8, 0);
+    this.group.add(this.hitboxMesh);
+
     scene.add(this.group);
   }
 
   _buildLaser() {
     // 3D Red Laser targeting beam
-    const laserGeo = new THREE.CylinderGeometry(0.022, 0.022, 1, 6);
+    const laserGeo = new THREE.CylinderGeometry(0.025, 0.025, 1, 6);
     laserGeo.rotateX(Math.PI / 2);
     laserGeo.translate(0, 0, 0.5);
 
@@ -3331,17 +3399,20 @@ class BossSniper {
     // Get current muzzle tip world position
     this.muzzleTip.getWorldPosition(this.barrelWorldPos);
 
-    // Player head target
+    // Player head target in world coordinates
     const playerTarget = camera.position.clone();
 
     if (this.state === 'tracking') {
       // 1. AIM & TRACK PLAYER REAL-TIME
       this.stateTimer -= dt;
-      this.gunPivot.lookAt(playerTarget);
 
-      // Aim entire body slightly towards player direction
-      const angle = Math.atan2(camera.position.x - this.group.position.x, camera.position.z - this.group.position.z);
+      // Aim entire body facing player direction
+      const dx = camera.position.x - this.group.position.x;
+      const dz = camera.position.z - this.group.position.z;
+      const angle = Math.atan2(dx, dz);
       this.group.rotation.y = angle + Math.PI;
+
+      this.gunPivot.lookAt(playerTarget);
 
       // Update laser from barrel to player position
       this._updateLaserBeam(this.barrelWorldPos, playerTarget, 0.7, 0xff0022);
@@ -3367,12 +3438,12 @@ class BossSniper {
       this.beepTimer += dt;
 
       // Warning audio pulse
-      if (this.beepTimer >= 0.18) {
+      if (this.beepTimer >= 0.16) {
         this.beepTimer = 0;
-        playLockOnBeep(1.0 + (1.0 - this.stateTimer) * 0.5);
+        playLockOnBeep(1.0 + (1.0 - this.stateTimer) * 0.6);
       }
 
-      // Violent laser beam strobe flash (alternating bright red & hot white)
+      // Laser beam strobe flash (alternating bright red & hot white)
       const flash = Math.sin(this.flashTimer * 45) > 0;
       this._updateLaserBeam(
         this.barrelWorldPos,
@@ -3386,7 +3457,7 @@ class BossSniper {
       if (this.stateTimer <= 0) {
         this._fireSniperShot();
         this.state = 'cooldown';
-        this.stateTimer = 2.6; // Bolt cycle / cooldown
+        this.stateTimer = 2.4; // Bolt cycle / cooldown
         this.laserMesh.visible = false;
 
         const warnEl = document.getElementById('laser-lock-warning');
@@ -3409,7 +3480,7 @@ class BossSniper {
     const dist = start.distanceTo(target);
     this.laserMesh.position.copy(start);
     this.laserMesh.lookAt(target);
-    this.laserMesh.scale.set(1, 1, dist);
+    this.laserMesh.scale.set(1, 1, Math.max(0.1, dist));
     this.laserMat.opacity = opacity;
     this.laserMat.color.setHex(colorHex);
   }
@@ -3420,41 +3491,77 @@ class BossSniper {
     // 1. Play massive .50 cal thunderous boom SFX
     playBossSniperShot();
 
-    // 2. Muzzle flash and heavy blast smoke at boss barrel
-    spawnMuzzleSmoke('sniper', this.barrelWorldPos, this.lockedAimPos.clone().sub(this.barrelWorldPos).normalize());
-
-    // 3. Raycast along locked trajectory to check if player or cover was hit
+    // 2. Heavy muzzle flash and blast smoke
+    this.muzzleTip.getWorldPosition(this.barrelWorldPos);
     const shotDir = this.lockedAimPos.clone().sub(this.barrelWorldPos).normalize();
-    const ray = new THREE.Ray(this.barrelWorldPos.clone(), shotDir);
+    spawnMuzzleSmoke('sniper', this.barrelWorldPos, shotDir);
 
-    // Check collision with cover bunkers / level geometry
-    let coverHitDist = Infinity;
+    // 3. Line-of-sight & Cover Check:
+    // Determine whether a reinforced bunker blocks line-of-sight between boss and player
+    const playerHeadPos = camera.position.clone();
+    const toPlayerDir = playerHeadPos.clone().sub(this.barrelWorldPos).normalize();
+    const playerDist = this.barrelWorldPos.distanceTo(playerHeadPos);
+    const coverRay = new THREE.Ray(this.barrelWorldPos.clone(), toPlayerDir);
+
+    let isPlayerInCover = false;
+    let coverHitPoint = null;
     const pt = new THREE.Vector3();
+
     for (const c of collidables) {
-      if (ray.intersectBox(c, pt)) {
-        const d = this.barrelWorldPos.distanceTo(pt);
-        if (d < coverHitDist) coverHitDist = d;
+      if (coverRay.intersectBox(c, pt)) {
+        const hitD = this.barrelWorldPos.distanceTo(pt);
+        // If a bunker obstacle is between the boss and player (with margin)
+        if (hitD < playerDist - 1.2) {
+          isPlayerInCover = true;
+          coverHitPoint = pt.clone();
+          break;
+        }
       }
     }
 
-    // Check distance to player
-    const playerDist = this.barrelWorldPos.distanceTo(camera.position);
+    // 4. Spawn high-velocity supersonic glowing .50 Cal Sniper Tracer Bullet
+    const bulletOrigin = this.barrelWorldPos.clone().addScaledVector(shotDir, 1.2);
+    const bulletGeo = new THREE.CylinderGeometry(0.06, 0.06, 1.4, 6);
+    bulletGeo.rotateX(Math.PI / 2);
+    const bulletMat = new THREE.MeshBasicMaterial({ color: 0xff3300 });
+    const bulletMesh = new THREE.Mesh(bulletGeo, bulletMat);
+    bulletMesh.position.copy(bulletOrigin);
+    bulletMesh.lookAt(bulletOrigin.clone().add(shotDir));
+    scene.add(bulletMesh);
 
-    // Check if player is near the locked line of fire (within hit cylinder)
-    const playerToRayDist = ray.distanceToPoint(camera.position);
+    // Add bright yellow-hot core
+    const coreMat = new THREE.MeshBasicMaterial({ color: 0xffee44 });
+    const coreMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.5, 6), coreMat);
+    coreMesh.rotation.x = Math.PI / 2;
+    bulletMesh.add(coreMesh);
 
-    // Player takes damage ONLY IF:
-    // a) Player is close enough to the locked crosshair position (didn't dodge behind cover)
-    // b) Cover bunker does NOT block line-of-fire
-    if (playerToRayDist < 1.45 && playerDist < coverHitDist) {
-      // 50 DAMAGE (2 shots = 100 HP = instant fatal death)
-      if (!isGodMode) player.health = Math.max(0, player.health - this.damage);
-      updateHealthHUD();
-      triggerDamageFlash();
+    // Trajectory direction
+    const projDir = isPlayerInCover && coverHitPoint
+      ? coverHitPoint.clone().sub(bulletOrigin).normalize()
+      : shotDir;
 
-      if (player.health <= 0) {
-        playerDie();
-      }
+    enemyProjectiles.push({
+      mesh: bulletMesh,
+      dir: projDir,
+      speed: 85, // Supersonic .50 cal speed
+      life: 2.5,
+      damage: this.damage,
+      isBossSniper: true
+    });
+
+    // 5. Deal direct damage if player was not in cover and failed to dodge
+    const playerMovedDist = playerHeadPos.distanceTo(this.lockedAimPos);
+
+    if (!isPlayerInCover && playerMovedDist < 4.5) {
+      setTimeout(() => {
+        if (player.alive && !isGodMode) {
+          player.health = Math.max(0, player.health - this.damage);
+          updateHealthHUD();
+          triggerDamageFlash();
+          shakeIntensity = Math.min(0.2, shakeIntensity + 0.12);
+          if (player.health <= 0) playerDie();
+        }
+      }, 90); // ~90ms ballistic arrival delay
     }
   }
 
@@ -3464,10 +3571,10 @@ class BossSniper {
     this.hp = Math.max(0, this.hp - dmg);
     this._updateBossHUD();
 
-    // Hit reaction
+    // Hit reaction flinch
     if (this.head) {
       this.head.rotation.x = -0.15;
-      setTimeout(() => { if (this.head) this.head.rotation.x = 0.18; }, 90);
+      setTimeout(() => { if (this.head) this.head.rotation.x = 0.22; }, 90);
     }
 
     if (this.hp <= 0) {
@@ -3501,19 +3608,20 @@ class BossSniper {
     playGoreHeadPopSound();
     spawnBloodFountain(this.group.position.clone().add(new THREE.Vector3(0, 1, 0)), new THREE.Vector3(0, 1, 0));
 
-    // Prone death slouch
+    // Slouch reaction
     this.torso.rotation.z = 0.45;
-    this.head.position.y = 0.12;
+    this.head.position.y = 0.5;
 
     kills++;
     document.getElementById('kills').textContent = kills;
   }
 }
 
+// ──────────────────────────────────────────────────────────────────────────────────────────────────────────────
 //  WAVE MANAGEMENT
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ──────────────────────────────────────────────────────────────────────────────────────────────────────────────
 function spawnWave() {
-  // Dispose previous wave â€” also remove dead body hitboxes from collidables
+  // Dispose previous wave — also remove dead body hitboxes from collidables
   enemies.forEach(e => {
     scene.remove(e.group);
     if (e.hpEl && e.hpEl.parentNode) e.hpEl.remove();
@@ -3527,32 +3635,26 @@ function spawnWave() {
   enemyProjectiles.forEach(p => scene.remove(p.mesh));
   enemyProjectiles = [];
 
+  // Ensure correct level landscape is loaded for current wave (boss arena for 10, normal map for others)
+  ensureCorrectLevelForWave(wave);
+
   // Hide boss HUD elements if not wave 10
   const bossHud = document.getElementById('boss-hud');
   const warnEl = document.getElementById('laser-lock-warning');
   if (bossHud && wave !== 10) bossHud.classList.add('hidden');
   if (warnEl) warnEl.classList.add('hidden');
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ────────────────────────────────────────────────────────────
   //  WAVE 10: APEX SNIPER BOSS ENCOUNTER
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ────────────────────────────────────────────────────────────
   if (wave === 10) {
-    // Clear all previous level geometry, vehicles, and barriers for clean blank arena
-    levelMeshes.forEach(m => scene.remove(m));
-    levelMeshes.length = 0;
-    collidables.length = 0;
-    vehicleColliders.length = 0;
-
-    // Build the blank boss arena with 3 strategic hiding spots and high sniper tower
-    createBossArena(selectedMap);
-
     // Position player behind safety in the arena facing the sniper nest
     camera.position.set(0, player.eyeHeight, 22);
     player.yaw = 0;
     player.pitch = 0;
 
-    // Spawn the single Apex Sniper Boss laying down on the high ground watchtower (28, 4.85, -28)
-    const boss = new BossSniper(28, 4.85, -28);
+    // Spawn the single Apex Sniper Boss at the forward sniper ledge overlooking the battlefield
+    const boss = new BossSniper(26.6, 4.25, -26.6);
     enemies.push(boss);
 
     document.getElementById('enemy-num').textContent = 1;
@@ -5013,13 +5115,19 @@ function updateProjectiles(dt) {
     p.life -= dt;
 
     // Player hit (sphere vs camera position)
-    if (p.mesh.position.distanceTo(camera.position) < 0.58) {
+    // Boss sniper bullet damage is handled via setTimeout in _fireSniperShot — skip double-hit here
+    if (!p.isBossSniper && p.mesh.position.distanceTo(camera.position) < 0.58) {
       if (!isGodMode) player.health = Math.max(0, player.health - p.damage);
       showDamageOverlay();
       updateHealthHUD();
       scene.remove(p.mesh);
       enemyProjectiles.splice(i, 1);
       if (player.health <= 0 && player.alive) triggerGameOver();
+      continue;
+    } else if (p.isBossSniper && p.mesh.position.distanceTo(camera.position) < 0.9) {
+      // Tracer reaches player position — destroy visually (damage already applied above)
+      scene.remove(p.mesh);
+      enemyProjectiles.splice(i, 1);
       continue;
     }
 
@@ -5238,15 +5346,8 @@ function checkWaveComplete() {
       document.getElementById('wave-complete').classList.add('hidden');
       wave++;
 
-      if (wave === 11) {
-        // Re-construct standard battlefield after boss arena
-        levelMeshes.forEach(m => scene.remove(m));
-        levelMeshes.length = 0;
-        collidables.length = 0;
-        vehicleColliders.length = 0;
-        createLevel(selectedMap);
-        camera.position.set(0, player.eyeHeight, 5);
-      }
+      // Ensure landscape reverts to normal map after wave 10 (or loads boss arena for 10)
+      ensureCorrectLevelForWave(wave);
 
       // Full health restoration after every wave
       player.health = player.maxHealth;
@@ -6441,7 +6542,9 @@ function closeAdminPanel() {
   const modal = document.getElementById('admin-modal');
   if (modal) modal.classList.add('hidden');
 
-  if (gameState === 'playing' && !isMobile) {
+  if (gameState === 'paused') {
+    resumeGame();
+  } else if (gameState === 'playing' && !isMobile) {
     document.getElementById('game-canvas').requestPointerLock();
   }
 }
@@ -6484,16 +6587,19 @@ function adminJumpToWave(targetWave) {
     document.getElementById('game-container').classList.remove('hidden');
     startGame();
     wave = targetWave; // retain target wave
+    ensureCorrectLevelForWave(wave);
     spawnWave();
   } else if (gameState === 'paused') {
     document.getElementById('pause-menu').classList.add('hidden');
     gameState = 'playing';
+    ensureCorrectLevelForWave(wave);
     spawnWave();
   } else {
     // Already playing or wavecomplete
     document.getElementById('wave-complete').classList.add('hidden');
     if (waveCountdownTimer) { clearInterval(waveCountdownTimer); waveCountdownTimer = null; }
     gameState = 'playing';
+    ensureCorrectLevelForWave(wave);
     spawnWave();
   }
 
