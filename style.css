@@ -427,6 +427,60 @@ html, body {
   box-shadow: 0 0 20px rgba(0, 229, 255, 0.35) !important;
 }
 
+/* ── Discord Server Button ── */
+.menu-btn.discord-btn {
+  width: 100%;
+  padding: 10px 18px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #e0e4ff;
+  background: linear-gradient(135deg, rgba(88, 101, 242, 0.18) 0%, rgba(88, 101, 242, 0.08) 100%);
+  border: 1px solid rgba(88, 101, 242, 0.45);
+  border-radius: 3px;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+  transition: all 0.2s ease;
+}
+
+.menu-btn.discord-btn:hover {
+  background: linear-gradient(135deg, rgba(88, 101, 242, 0.38) 0%, rgba(88, 101, 242, 0.2) 100%);
+  border-color: #5865f2;
+  box-shadow: 0 0 22px rgba(88, 101, 242, 0.45);
+  transform: translateY(-2px);
+  color: #ffffff;
+}
+
+.discord-icon {
+  width: 17px;
+  height: 17px;
+  color: #5865f2;
+  flex-shrink: 0;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.menu-btn.discord-btn:hover .discord-icon {
+  color: #ffffff;
+  transform: scale(1.12);
+}
+
+.discord-server-badge {
+  font-family: var(--font-title);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  background: rgba(88, 101, 242, 0.4);
+  color: #ffffff;
+  padding: 2px 7px;
+  border-radius: 3px;
+  border: 1px solid rgba(88, 101, 242, 0.6);
+  text-shadow: 0 0 6px rgba(88, 101, 242, 0.8);
+}
+
 .menu-btn::before {
   content: '';
   position: absolute;
