@@ -11,7 +11,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap"
     rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=4" />
+  <link rel="stylesheet" href="style.css?v=5" />
 </head>
 
 <body>
@@ -23,52 +23,69 @@
     <div class="menu-bg"></div>
     <div class="scanlines"></div>
     <div class="menu-content">
+      <div class="menu-corner top-left"></div>
+      <div class="menu-corner top-right"></div>
+      <div class="menu-corner btm-left"></div>
+      <div class="menu-corner btm-right"></div>
+
       <div class="title-block">
         <div class="title-glow">DEADZONE</div>
         <h1 class="game-title">DEADZONE</h1>
-        <p class="game-subtitle">SURVIVE THE ONSLAUGHT</p>
-        <div class="version-tag">VERSION 1.3.0</div>
+        <div class="title-sub-wrap">
+          <span class="sub-flair">◀</span>
+          <p class="game-subtitle">SURVIVE THE ONSLAUGHT</p>
+          <span class="sub-flair">▶</span>
+        </div>
+        <div class="version-tag"><span class="status-pulse"></span> v1.3.0 · COMBAT SYSTEM READY</div>
       </div>
       
-      <div class="loadout-section">
-        <div class="loadout-item">
-          <label for="primary-weapon">PRIMARY</label>
-          <select id="primary-weapon" class="weapon-select">
-            <option value="rifle">ASSAULT RIFLE</option>
-            <option value="shotgun">SHOTGUN</option>
-            <option value="sniper">SNIPER RIFLE</option>
-          </select>
+      <div class="loadout-container">
+        <div class="loadout-header">
+          <span class="loadout-header-tag">TACTICAL LOADOUT CONFIGURATION</span>
+          <span class="loadout-header-line"></span>
         </div>
-        <div class="loadout-item">
-          <label for="secondary-weapon">SECONDARY</label>
-          <select id="secondary-weapon" class="weapon-select">
-            <option value="pistol">STANDARD PISTOL</option>
-            <option value="deagle">DESERT EAGLE</option>
-            <option value="uzi">UZI</option>
-          </select>
-        </div>
-        <div class="loadout-item">
-          <label for="map-select">MAP</label>
-          <select id="map-select" class="weapon-select">
-            <option value="deadzone">⚔ DEADZONE</option>
-            <option value="warfront">🏜 WARFRONT</option>
-          </select>
+        <div class="loadout-section">
+          <div class="loadout-item item-primary">
+            <label for="primary-weapon"><span>PRIMARY</span><span class="slot-badge">SLOT 1</span></label>
+            <select id="primary-weapon" class="weapon-select">
+              <option value="rifle">ASSAULT RIFLE</option>
+              <option value="shotgun">SHOTGUN</option>
+              <option value="sniper">SNIPER RIFLE</option>
+            </select>
+          </div>
+          <div class="loadout-item item-secondary">
+            <label for="secondary-weapon"><span>SECONDARY</span><span class="slot-badge">SLOT 2</span></label>
+            <select id="secondary-weapon" class="weapon-select">
+              <option value="pistol">STANDARD PISTOL</option>
+              <option value="deagle">DESERT EAGLE</option>
+              <option value="uzi">UZI</option>
+            </select>
+          </div>
+          <div class="loadout-item item-map">
+            <label for="map-select"><span>DEPLOYMENT ZONE</span><span class="slot-badge">SECTOR</span></label>
+            <select id="map-select" class="weapon-select">
+              <option value="deadzone">⚔ DEADZONE — URBAN RUINS</option>
+              <option value="warfront">🏜 WARFRONT — DESERT WASTELAND</option>
+            </select>
+          </div>
         </div>
       </div>
 
       <nav class="menu-buttons" aria-label="Main menu">
-        <button id="play-btn" class="menu-btn primary" aria-label="Start game">
-          <span class="btn-icon">▶</span> PLAY
+        <button id="play-btn" class="menu-btn primary play-action" aria-label="Start game">
+          <span class="btn-icon">▶</span> DEPLOY MISSION
         </button>
-        <button id="controls-btn" class="menu-btn" aria-label="View controls">
-          <span class="btn-icon">⌨</span> CONTROLS
-        </button>
-        <button id="admin-menu-btn" class="menu-btn admin-btn-style" onclick="openAdminPanel()" aria-label="Admin panel">
-          <span class="btn-icon">⚡</span> ADMIN
-        </button>
+        <div class="secondary-btn-row">
+          <button id="controls-btn" class="menu-btn secondary-btn" aria-label="View controls">
+            <span class="btn-icon">⌨</span> CONTROLS
+          </button>
+          <button id="admin-menu-btn" class="menu-btn admin-btn-style" onclick="openAdminPanel()" aria-label="Admin panel">
+            <span class="btn-icon">⚡</span> ADMIN
+          </button>
+        </div>
       </nav>
-      <div class="menu-footer" id="menu-footer-hint">WASD · MOUSE · CLICK TO SHOOT · R RELOAD · 1/2/3 SWITCH</div>
-      <div class="menu-credit">made by Taheer</div>
+      <div class="menu-footer" id="menu-footer-hint">WASD MOVE · MOUSE AIM · CLICK TO SHOOT · R RELOAD · 1/2/3 WEAPONS</div>
+      <div class="menu-credit">DEADZONE // CREATED BY TAHEER</div>
     </div>
   </div>
 
